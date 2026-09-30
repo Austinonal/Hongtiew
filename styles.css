@@ -43,6 +43,7 @@ body {
   font-family: "Anuphan", "Noto Sans Thai", "Leelawadee UI", "Thonburi", system-ui, sans-serif;
   font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; overscroll-behavior: none;
 }
+body { background: linear-gradient(180deg, color-mix(in srgb, var(--pen) 14%, var(--paper)), var(--paper) 65%), var(--paper); }
 button { font: inherit; color: inherit; }
 img { max-width: 100%; }
 svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -87,13 +88,10 @@ svg .fill { fill: currentColor; stroke: none; }
 .chip:hover { border-color: var(--ink-soft); }
 .chip[aria-pressed="true"] { background: var(--marker); color: var(--marker-ink); border-color: var(--marker); font-weight: 600; }
 
-/* Thread on graph paper with a notebook margin */
-.chat { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; background-color: var(--paper);
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 24px 24px; background-attachment: local; }
-.thread { position: relative; min-height: 100%; max-width: 860px; margin: 0 auto; padding: 20px 18px 28px 44px; }
-.thread::before { content: ""; position: absolute; top: 0; bottom: 0; left: 28px; width: 2px; background: var(--margin); }
-@media (max-width: 520px) { .thread { padding: 16px 12px 22px 30px; } .thread::before { left: 18px; } }
+/* Thread */
+.chat { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.thread { position: relative; min-height: 100%; max-width: 860px; margin: 0 auto; padding: 20px 18px 28px; }
+@media (max-width: 520px) { .thread { padding: 16px 12px 22px; } }
 
 .msg { margin: 0 0 22px; }
 .msg.user { display: flex; flex-direction: column; align-items: flex-end; }
@@ -345,11 +343,9 @@ textarea.text { min-height: 220px; line-height: 1.6; resize: vertical; }
 .tb-opts label { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; }
 
 /* Onboarding */
-.onboard { position: fixed; inset: 0; z-index: 40; background: var(--paper); overflow-y: auto;
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px;
+.onboard { position: fixed; inset: 0; z-index: 40; background: linear-gradient(180deg, color-mix(in srgb, var(--pen) 14%, var(--paper)), var(--paper) 65%), var(--paper); overflow-y: auto;
   padding: calc(env(safe-area-inset-top, 0px) + 24px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px); }
-.ob-inner { max-width: 520px; margin: 0 auto; position: relative; padding-left: 26px; }
-.ob-inner::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--margin); }
+.ob-inner { max-width: 520px; margin: 0 auto; position: relative; }
 .ob-title { font-size: clamp(1.8rem, 7vw, 2.4rem); line-height: 1.15; margin: 8px 0 10px; }
 .ob-title mark { background: linear-gradient(transparent 55%, var(--marker) 55%, var(--marker) 92%, transparent 92%); color: inherit; padding: 0 2px; }
 .ob-step { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 14px; margin: 14px 0; }
