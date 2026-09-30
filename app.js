@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '2.0.0';
+  var VERSION = '2.1.0';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
@@ -477,7 +477,7 @@
           flags.notes.push('ค้นเว็บไม่ได้ในตอนนี้ (บัญชีฟรีบางแบบใช้การค้นเว็บไม่ได้) ครูเลยตอบโดยไม่ค้นเว็บ');
           continue;
         }
-        if (flags.code && e.http === 400 && /code.?execution|tool/.test(msg)) { flags.code = false; continue; }
+        if (flags.code && e.http === 400 && /code.?execution|tool/.test(msg)) { flags.code = false; flags.notes.push('ครั้งนี้ครูรันโค้ดตรวจคำตอบไม่ได้ เฉลยและตัวเลขอาจผิดได้ ควรตรวจซ้ำ'); continue; }
         if (flags.search && e.http === 400 && /tool/.test(msg)) { flags.search = false; continue; }
         if (o.schema && !flags.altJson && e.http === 400 && /response_?mime|response_?json|responsejsonschema|responsemimetype|unknown name|invalid json payload/.test(msg)) { flags.altJson = true; continue; }
         if (!flags.reupload && (e.http === 403 || e.http === 404 || e.http === 400) && /file/.test(msg) && /(not exist|not found|permission|expired|access)/.test(msg)) { flags.reupload = true; continue; }
@@ -904,7 +904,7 @@
       node.insertBefore(det, anchor);
       if (m.sources.rendered) {
         var host = h('div', { class: 'search-chips' });
-        try { host.attachShadow({ mode: 'open' }).innerHTML = m.sources.rendered; } catch (e) {}
+        try { host.attachShadow({ mode: 'open' }).innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(m.sources.rendered, { FORCE_BODY: true, ADD_ATTR: ['target'] }) : ''; } catch (e) {}
         node.insertBefore(host, anchor);
       }
     }
@@ -1043,6 +1043,11 @@
         if (qq.trap) fb.appendChild(h('div', { class: 'fb-sec' }, [h('b', { text: 'กับดัก' }), h('div', { class: 'md', html: renderMarkdown(qq.trap) })]));
         if (qq.technique) fb.appendChild(h('div', { class: 'fb-sec' }, [h('b', { text: 'เทคนิค' }), h('div', { class: 'md', html: renderMarkdown(qq.technique) })]));
         if (qq.source) fb.appendChild(h('div', { class: 'muted', text: 'อ้างอิง: ' + qq.source }));
+        fb.appendChild(h('button', { class: 'textbtn', type: 'button', text: 'เฉลยน่าสงสัย ให้ครูตรวจใหม่', onclick: function () {
+          var key = qq.type === 'numeric' ? correctText : LETTERS[qq.answer] + ' ' + clip(qq.choices[qq.answer], 150);
+          var opts = qq.choices ? ' | ตัวเลือก: ' + qq.choices.map(function (c, ci) { return LETTERS[ci] + ') ' + clip(c, 150); }).join(' / ') : '';
+          send('ช่วยตรวจเฉลยข้อ ' + (qi + 1) + ' ในแบบทดสอบ "' + q.title + '" ใหม่อีกครั้ง โจทย์: ' + clip(qq.question, 400) + opts + ' | เฉลยที่ให้ไว้: ' + key + ' ตรวจละเอียด ถ้าผิดให้บอกคำตอบที่ถูกพร้อมเหตุผล');
+        } }));
         block.appendChild(fb);
       }
       paper.appendChild(block);
@@ -1876,8 +1881,11 @@
     var importInput = h('input', { type: 'file', accept: 'application/json,.json', hidden: true });
     importInput.addEventListener('change', function () { var f = importInput.files && importInput.files[0]; importInput.value = ''; if (f) importBackup(f); });
     root.appendChild(importInput);
+    root.appendChild(h('p', { class: 'muted', text: 'สำรองล่าสุด: ' + (S.lastBackupAt ? fmtDate(S.lastBackupAt) : 'ยังไม่เคย') + (S.persisted === false ? ' — เบราว์เซอร์ยังไม่รับประกันว่าจะเก็บข้อมูลไว้ถาวร ควรสำรองบ่อยๆ' : '') }));
+    var canShare = navigator.canShare && navigator.canShare({ files: [new File(['{}'], 'a.json', { type: 'application/json' })] });
     root.appendChild(h('div', { class: 'row' }, [
       h('button', { class: 'primary', type: 'button', text: 'สำรองข้อมูลเป็นไฟล์', onclick: function () { exportBackup(withFiles.checked); } }),
+      canShare ? h('button', { class: 'textbtn', type: 'button', text: 'แชร์ไฟล์สำรอง (Drive, LINE)', onclick: function () { exportBackup(withFiles.checked, true); } }) : null,
       h('button', { class: 'textbtn', type: 'button', text: 'นำเข้าไฟล์สำรอง', onclick: function () { importInput.click(); } })
     ]));
 
@@ -1911,7 +1919,7 @@
   function applyTheme() { var r = document.documentElement; if (S.theme === 'light' || S.theme === 'dark') r.setAttribute('data-theme', S.theme); else r.removeAttribute('data-theme'); }
 
   // Backup
-  async function exportBackup(withFiles) {
+  async function exportBackup(withFiles, share) {
     var out = { app: 'hongtiew', version: 2, exportedAt: Date.now(), settings: { model: S.model, thinking: S.thinking, codeExec: S.codeExec, search: S.search, theme: S.theme }, profile: state.profile, log: state.log };
     for (var i = 0; i < STORES.length; i++) {
       var s = STORES[i];
@@ -1926,11 +1934,20 @@
       }
       out[s] = rows;
     }
+    var name = 'hongtiew-backup-' + dayKey() + '.json';
     var blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
-    var a = h('a', { href: URL.createObjectURL(blob), download: 'hongtiew-backup-' + dayKey() + '.json' });
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    if (share) {
+      try { await navigator.share({ files: [new File([blob], name, { type: 'application/json' })] }); }
+      catch (e) { if (e && e.name === 'AbortError') return; share = false; }
+    }
+    if (!share) {
+      var a = h('a', { href: URL.createObjectURL(blob), download: name });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    }
+    S.lastBackupAt = Date.now(); saveSettings();
     showToast('สร้างไฟล์สำรองแล้ว');
+    if (state.view === 'settings') renderSettings();
   }
   async function importBackup(file) {
     try {
@@ -2117,7 +2134,12 @@
     sessions.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
     if (sessions[0] && !state.session.messages.length && Date.now() - (sessions[0].updatedAt || 0) < 18 * 3600e3) openSession(sessions[0]);
     refreshDue();
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+    if (navigator.storage && navigator.storage.persist) { S.persisted = await navigator.storage.persist().catch(function () { return undefined; }); saveSettings(); }
+    var lastSafe = S.lastBackupAt || (sessions.length ? sessions[sessions.length - 1].updatedAt : Date.now());
+    if (Date.now() - lastSafe > (S.persisted === false ? 3 : 7) * DAY && Date.now() - (S.backupNudgeAt || 0) > DAY) {
+      S.backupNudgeAt = Date.now(); saveSettings();
+      showToast('ยังไม่ได้สำรองข้อมูลมาสักพักแล้ว', 'สำรองเลย', function () { showView('settings'); });
+    }
   })();
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

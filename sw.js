@@ -1,5 +1,5 @@
 /* ห้องติว service worker: keeps the app working offline; never caches API calls. */
-var CACHE = 'hongtiew-v2.0.2';
+var CACHE = 'hongtiew-v2.1.0'; // keep in sync with VERSION in app.js
 var CORE = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'vendor/marked.min.js', 'vendor/purify.min.js', 'vendor/mathjax/tex-svg.js',
@@ -7,7 +7,9 @@ var CORE = [
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'
 ];
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CORE); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) { return Promise.all(CORE.map(function (u) {
+    return fetch(new Request(u, { cache: 'reload' })).then(function (r) { if (!r.ok) throw new Error(u); return c.put(u, r); });
+  })); }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
