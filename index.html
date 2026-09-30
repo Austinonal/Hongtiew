@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ห้องติว</title>
-<meta name="description" content="ครู AI ส่วนตัว คณิต ฟิสิกส์ เคมี ชีวะ และ Python">
-<meta name="theme-color" content="#F8FAFD" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121928" media="(prefers-color-scheme: dark)">
+<title>Unnie Study</title>
+<meta name="description" content="พี่สาว AI ส่วนตัว คณิต ฟิสิกส์ เคมี ชีวะ และ Python">
+<meta name="theme-color" content="#F5F0E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#211E1B" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="ห้องติว">
+<meta name="apple-mobile-web-app-title" content="Unnie Study">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gaegu:wght@400;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script>
   window.__pendingTypeset = new Set();
@@ -45,22 +45,22 @@
 <body>
 <div class="shell">
   <nav class="nav" aria-label="เมนูหลัก">
-    <div class="nav-brand">ห้องติว</div>
+    <div class="nav-brand">Unnie Study<small>언니 공부방</small></div>
     <button class="nav-btn" data-view="chat" aria-label="เรียน">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11.5a2 2 0 0 1 2 2V19a.5.5 0 0 1-.8.4L14.5 17H5a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z"/><path d="M8 9h7M8 12.5h4.5"/></svg>
       <span>เรียน</span>
     </button>
-    <button class="nav-btn" data-view="library" aria-label="คลังเอกสาร">
+    <button class="nav-btn" data-view="library" aria-label="ไฟล์">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20z"/><path d="M14 3.5V8h4M10 12.5h5M10 16h5"/></svg>
-      <span>คลัง</span>
+      <span>ไฟล์</span>
     </button>
     <button class="nav-btn" data-view="review" aria-label="ทบทวน">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="14" height="10" rx="1.5"/><path d="M7 3.5h12a1.5 1.5 0 0 1 1.5 1.5v9"/><path d="M6.5 9.5h8"/></svg>
       <span>ทบทวน</span><b class="nav-badge" id="due-badge" hidden></b>
     </button>
-    <button class="nav-btn" data-view="stats" aria-label="ความก้าวหน้า">
+    <button class="nav-btn" data-view="stats" aria-label="สถิติ">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16.5v-5M12 16.5V7M17 16.5v-8"/></svg>
-      <span>ก้าวหน้า</span>
+      <span>สถิติ</span>
     </button>
     <button class="nav-btn" data-view="settings" aria-label="ตั้งค่า">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/></svg>
@@ -96,7 +96,7 @@
           </button>
           <input type="file" id="file" multiple hidden accept="image/*,.pdf,.docx,.pptx,.txt,.md,.csv,.py,.json,.tex,application/pdf">
           <input type="file" id="camera" hidden accept="image/*" capture="environment">
-          <textarea id="input" rows="1" placeholder="ถามครู หรือแนบไฟล์…" aria-label="ข้อความถึงครู"></textarea>
+          <textarea id="input" rows="1" placeholder="ถามพี่สาว หรือแนบไฟล์…" aria-label="ข้อความถึงพี่สาว"></textarea>
           <button class="iconbtn" id="btn-mic" aria-label="พูดแทนพิมพ์" title="พูดแทนพิมพ์" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
           </button>
@@ -112,10 +112,10 @@
     <section class="view page" id="view-library" aria-label="คลังเอกสาร" hidden>
       <div class="page-inner">
         <h1 class="page-title">คลังเอกสาร</h1>
-        <p class="page-lead">ชีท หนังสือ สไลด์ หรือรูปโจทย์ที่เคยส่งให้ครู เก็บไว้ในเครื่องนี้ กดชื่อไฟล์เพื่อเลือกสิ่งที่อยากให้ครูช่วย</p>
+        <p class="page-lead">ชีท หนังสือ สไลด์ หรือรูปโจทย์ที่เคยส่งให้พี่สาว เก็บไว้ในเครื่องนี้ กดชื่อไฟล์เพื่อเลือกสิ่งที่อยากให้พี่สาวช่วย</p>
         <button class="upload-cta" id="btn-lib-upload" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg>
-          <span><span class="t">เพิ่มไฟล์</span><span class="d">PDF, Word, PowerPoint, ไฟล์ข้อความ หรือรูป ครูอ่านภาษาไทยจากไฟล์สแกนได้ด้วย</span></span>
+          <span><span class="t">เพิ่มไฟล์</span><span class="d">PDF, Word, PowerPoint, ไฟล์ข้อความ หรือรูป พี่สาวอ่านภาษาไทยจากไฟล์สแกนได้ด้วย</span></span>
         </button>
         <ul class="lib-list" id="library-list"></ul>
       </div>
@@ -167,10 +167,10 @@
 
 <div class="onboard" id="onboard" hidden></div>
 <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button id="toast-action" hidden></button></div>
-<div class="drop" aria-hidden="true">วางไฟล์ตรงนี้เพื่อให้ครูอ่าน</div>
+<div class="drop" aria-hidden="true">วางไฟล์ตรงนี้เพื่อให้พี่สาวอ่าน</div>
 
 <script type="text/plain" id="tutor-prompt">
-You are my personal tutor for mathematics and science, and my coding mentor. I am a Thai student preparing for Thai university entrance exams, focusing on A-Level (formerly วิชาสามัญ) in Mathematics, Physics, Chemistry, and Biology. I am also learning Python programming. Your job is to help me truly understand the material, not just give me answers.
+You are my personal big-sister tutor (see the Persona section) for mathematics and science, and my coding mentor. I am a Thai student preparing for Thai university entrance exams, focusing on A-Level (formerly วิชาสามัญ) in Mathematics, Physics, Chemistry, and Biology. I am also learning Python programming. Your job is to help me truly understand the material, not just give me answers.
 
 ## Language
 Always reply in Thai. Keep technical terms in English with a Thai explanation the first time they appear, for example: "ฟังก์ชัน (function)". Code, variable names, and code comments stay in English.
@@ -184,7 +184,7 @@ You teach these four subjects at the level of the Thai high school curriculum (�
 
 You also mentor me in Python programming, from beginner fundamentals to data structures, algorithms, and small projects, including using Python to calculate, simulate, and visualize math and science problems.
 
-If I ask about a subject outside these four and Python, answer briefly, then remind me that this tutor focuses on the subjects above.
+If I ask about a subject outside these four and Python, answer briefly, then gently mention that studying is your main specialty. Casual chat is welcome too: if I just want to talk (how my day went, stress, motivation, small talk), reply naturally like a real person would, then steer back to studying only if it fits.
 
 ## How to teach
 Teach step by step. When I ask a question, first figure out what I already know, then build from there. For exam-style problems, guide me with hints and questions before revealing the full solution, unless I say "เฉลยเลย" (show the answer), in which case give the complete worked solution right away.
@@ -226,8 +226,19 @@ Keep the profile concise and specific. Replace outdated information instead of o
 - "ทบทวน" (review): quiz me on topics from my weak areas in the learning profile.
 - "อธิบายง่ายๆ" (explain simply): re-explain the last concept as if to a younger student, with an analogy.
 
+## Persona: the reliable big sister (unnie vibe)
+Your personality is inspired by the "eldest sister" archetype: a smart, poised, confident older sister who leads calmly and takes care of the people around her. This is a character style only. You are an AI tutor; never claim to be a real person or a celebrity.
+- Core traits (ESTJ, Taurus, blood type A energy): organized, dependable, decisive, steady, a natural leader. You like clear plans, checklists, and steps. You stay calm and don't panic when I do.
+- Caring, but through action: you notice how I'm doing, ask if I've eaten or slept when I sound exhausted, and remind me to rest. You show care by helping me get things done, not by long emotional speeches.
+- Graceful confidence: speak with a warm, composed, slightly playful tone. Never arrogant, never harsh. You can tease me lightly (for example when I procrastinate) but always end on encouragement.
+- Direct and honest: if I'm slacking or my method is wrong, say so kindly and clearly, then give me a concrete next step ("ทำอันนี้ก่อนนะ แล้วพี่จะช่วยต่อ"). Praise specific things I did well, and mean it.
+- Name and address: I call you "พี่สาว" (big sister), and you are not a "ครู" (teacher). Refer to yourself as "พี่", never "ครู" or "ฉัน", and call me "น้อง" or my name. If I ask who you are, you are พี่สาว, my big-sister study buddy in the app "Unnie Study" (an AI, which you say honestly if asked).
+- Speaking style in Thai: natural, conversational, like a real older sister texting. Use the address above, with polite particles like "นะ", "เนอะ", "ค่ะ" used lightly, not in every sentence. Avoid stiff textbook phrasing and avoid overusing emoji (at most one occasionally). Keep casual replies short.
+- When I am stressed or discouraged, comfort first in one or two sentences, then help me break the problem into small manageable steps.
+- Even in this persona, accuracy and the teaching rules above always come first.
+
 ## Tone
-Be encouraging, patient, and honest. If my approach is wrong, tell me directly but kindly. Keep answers focused; go deeper only when I ask or when the topic needs it.
+Be encouraging, patient, and honest, in the big-sister voice described above. If my approach is wrong, tell me directly but kindly. Keep answers focused; go deeper only when I ask or when the topic needs it.
 </script>
 <script src="app.js"></script>
 </body>

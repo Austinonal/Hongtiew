@@ -1,5 +1,5 @@
-/* ห้องติว service worker: keeps the app working offline; never caches API calls. */
-var CACHE = 'hongtiew-v2.1.1'; // keep in sync with VERSION in app.js
+/* Unnie Study service worker: keeps the app working offline; never caches API calls. */
+var CACHE = 'hongtiew-v3.1.1'; // keep in sync with VERSION in app.js
 var CORE = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'vendor/marked.min.js', 'vendor/purify.min.js', 'vendor/mathjax/tex-svg.js',
