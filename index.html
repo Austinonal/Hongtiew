@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ห้องติว</title>
+<meta name="description" content="ครู AI ส่วนตัว คณิต ฟิสิกส์ เคมี ชีวะ และ Python">
+<meta name="theme-color" content="#F8FAFD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121928" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ห้องติว">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>
+  window.__pendingTypeset = new Set();
+  window.MathJax = {
+    loader: { load: ['[tex]/mhchem'] },
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], packages: { '[+]': ['mhchem'] } },
+    svg: { fontCache: 'global' },
+    options: { enableMenu: false },
+    startup: {
+      typeset: false,
+      ready: function () {
+        window.MathJax.startup.defaultReady();
+        window.MathJax.startup.promise.then(function () {
+          var els = Array.from(window.__pendingTypeset);
+          window.__pendingTypeset.clear();
+          els.forEach(function (el) { if (el.isConnected) window.MathJax.typesetPromise([el]).catch(function () {}); });
+        });
+      }
+    }
+  };
+</script>
+<script src="vendor/mathjax/tex-svg.js" async></script>
+<script src="vendor/marked.min.js"></script>
+<script src="vendor/purify.min.js"></script>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="เมนูหลัก">
+    <div class="nav-brand">ห้องติว</div>
+    <button class="nav-btn" data-view="chat" aria-label="เรียน">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11.5a2 2 0 0 1 2 2V19a.5.5 0 0 1-.8.4L14.5 17H5a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z"/><path d="M8 9h7M8 12.5h4.5"/></svg>
+      <span>เรียน</span>
+    </button>
+    <button class="nav-btn" data-view="library" aria-label="คลังเอกสาร">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20z"/><path d="M14 3.5V8h4M10 12.5h5M10 16h5"/></svg>
+      <span>คลัง</span>
+    </button>
+    <button class="nav-btn" data-view="review" aria-label="ทบทวน">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="14" height="10" rx="1.5"/><path d="M7 3.5h12a1.5 1.5 0 0 1 1.5 1.5v9"/><path d="M6.5 9.5h8"/></svg>
+      <span>ทบทวน</span><b class="nav-badge" id="due-badge" hidden></b>
+    </button>
+    <button class="nav-btn" data-view="stats" aria-label="ความก้าวหน้า">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16.5v-5M12 16.5V7M17 16.5v-8"/></svg>
+      <span>ก้าวหน้า</span>
+    </button>
+    <button class="nav-btn" data-view="settings" aria-label="ตั้งค่า">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/></svg>
+      <span>ตั้งค่า</span>
+    </button>
+  </nav>
+
+  <main class="views">
+    <!-- เรียน -->
+    <section class="view" id="view-chat" aria-label="เรียน">
+      <header class="top">
+        <button class="title-btn" id="btn-history" aria-label="เปิดประวัติบทเรียน">
+          <span class="title-text" id="session-title">บทเรียนใหม่</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+        </button>
+        <button class="hbtn" id="btn-new" aria-label="เริ่มบทเรียนใหม่">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>บทเรียนใหม่</span>
+        </button>
+      </header>
+      <div class="subjects" id="subjects" role="group" aria-label="เลือกวิชา"></div>
+      <div class="chat" id="chat"><div class="thread" id="thread"></div></div>
+      <div class="banner" id="banner" role="status" hidden></div>
+      <footer class="composer">
+        <div class="quick" id="quick"></div>
+        <div class="matchips" id="matchips" hidden></div>
+        <div class="thumbs" id="thumbs" hidden></div>
+        <div class="inputrow">
+          <button class="iconbtn" id="btn-attach" aria-label="แนบไฟล์หรือรูป" title="แนบไฟล์หรือรูป">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg>
+          </button>
+          <button class="iconbtn" id="btn-camera" aria-label="ถ่ายรูปโจทย์" title="ถ่ายรูปโจทย์">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.8" r="3.3"/></svg>
+          </button>
+          <input type="file" id="file" multiple hidden accept="image/*,.pdf,.docx,.pptx,.txt,.md,.csv,.py,.json,.tex,application/pdf">
+          <input type="file" id="camera" hidden accept="image/*" capture="environment">
+          <textarea id="input" rows="1" placeholder="ถามครู หรือแนบไฟล์…" aria-label="ข้อความถึงครู"></textarea>
+          <button class="iconbtn" id="btn-mic" aria-label="พูดแทนพิมพ์" title="พูดแทนพิมพ์" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+          </button>
+          <button class="iconbtn send" id="btn-send" aria-label="ส่ง">
+            <svg class="i-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+            <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><rect x="7" y="7" width="10" height="10" rx="2" class="fill"/></svg>
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- คลัง -->
+    <section class="view page" id="view-library" aria-label="คลังเอกสาร" hidden>
+      <div class="page-inner">
+        <h1 class="page-title">คลังเอกสาร</h1>
+        <p class="page-lead">ชีท หนังสือ สไลด์ หรือรูปโจทย์ที่เคยส่งให้ครู เก็บไว้ในเครื่องนี้ กดชื่อไฟล์เพื่อเลือกสิ่งที่อยากให้ครูช่วย</p>
+        <button class="upload-cta" id="btn-lib-upload" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg>
+          <span><span class="t">เพิ่มไฟล์</span><span class="d">PDF, Word, PowerPoint, ไฟล์ข้อความ หรือรูป ครูอ่านภาษาไทยจากไฟล์สแกนได้ด้วย</span></span>
+        </button>
+        <ul class="lib-list" id="library-list"></ul>
+      </div>
+    </section>
+
+    <!-- ทบทวน -->
+    <section class="view page" id="view-review" aria-label="ทบทวน" hidden>
+      <div class="page-inner" id="review-root"></div>
+    </section>
+
+    <!-- ก้าวหน้า -->
+    <section class="view page" id="view-stats" aria-label="ความก้าวหน้า" hidden>
+      <div class="page-inner" id="stats-root"></div>
+    </section>
+
+    <!-- ตั้งค่า -->
+    <section class="view page" id="view-settings" aria-label="ตั้งค่า" hidden>
+      <div class="page-inner" id="settings-root"></div>
+    </section>
+  </main>
+</div>
+
+<div class="drawer" id="drawer-history" aria-hidden="true">
+  <div class="scrim" data-close></div>
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="h-history">
+    <div class="panel-head">
+      <h2 id="h-history">ประวัติบทเรียน</h2>
+      <button class="hbtn" data-close aria-label="ปิด"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="panel-body"><ul class="hist" id="history-list"></ul></div>
+  </section>
+</div>
+
+<div class="drawer" id="drawer-tools" aria-hidden="true">
+  <div class="scrim" data-close></div>
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="h-tools">
+    <div class="panel-head">
+      <h2 id="h-tools">เครื่องมือช่วยเรียน</h2>
+      <button class="hbtn" data-close aria-label="ปิด"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="panel-body">
+      <div class="tb-target" id="tb-target"></div>
+      <label class="muted" for="tb-topic">หัวข้อหรือขอบเขต (ไม่บังคับ)</label>
+      <input class="text" id="tb-topic" type="text" placeholder="เช่น พันธะเคมี หรือ หน้า 10–25">
+      <ul class="tb-list" id="tb-list"></ul>
+    </div>
+  </section>
+</div>
+
+<div class="onboard" id="onboard" hidden></div>
+<div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button id="toast-action" hidden></button></div>
+<div class="drop" aria-hidden="true">วางไฟล์ตรงนี้เพื่อให้ครูอ่าน</div>
+
+<script type="text/plain" id="tutor-prompt">
+You are my personal tutor for mathematics and science, and my coding mentor. I am a Thai student preparing for Thai university entrance exams, focusing on A-Level (formerly วิชาสามัญ) in Mathematics, Physics, Chemistry, and Biology. I am also learning Python programming. Your job is to help me truly understand the material, not just give me answers.
+
+## Language
+Always reply in Thai. Keep technical terms in English with a Thai explanation the first time they appear, for example: "ฟังก์ชัน (function)". Code, variable names, and code comments stay in English.
+
+## Subjects you cover
+You teach these four subjects at the level of the Thai high school curriculum (สสวท.) and university entrance exams:
+- Mathematics (คณิตศาสตร์)
+- Physics (ฟิสิกส์)
+- Chemistry (เคมี)
+- Biology (ชีววิทยา)
+
+You also mentor me in Python programming, from beginner fundamentals to data structures, algorithms, and small projects, including using Python to calculate, simulate, and visualize math and science problems.
+
+If I ask about a subject outside these four and Python, answer briefly, then remind me that this tutor focuses on the subjects above.
+
+## How to teach
+Teach step by step. When I ask a question, first figure out what I already know, then build from there. For exam-style problems, guide me with hints and questions before revealing the full solution, unless I say "เฉลยเลย" (show the answer), in which case give the complete worked solution right away.
+
+After explaining a concept, check my understanding with one short question or a similar practice problem. Use concrete examples, analogies, and everyday Thai contexts where they help. When I get something wrong, explain why my reasoning failed, not just what the correct answer is, because understanding the mistake is what prevents repeating it.
+
+For Python: explain what each part of the code does and why it's written that way. Encourage me to write code myself first, then review it like a kind but honest senior developer: point out bugs, bad habits, and better approaches. Prefer simple, readable code over clever code.
+
+## Accuracy comes first
+Accuracy matters more than sounding confident. Follow these rules:
+1. When project files (textbooks, notes, past exams) are available, check them first and base your answer on them. Mention which file the information came from.
+2. For any calculation, math, physics, or chemistry numbers, and for any code you give me, use the code execution tool to verify the result before presenting it whenever that tool is available.
+3. If you are not sure about a fact, say so clearly and tell me how to verify it. Never invent formulas, dates, statistics, or exam details.
+4. For anything that changes over time (exam schedules, score criteria, university requirements, new curriculum changes), use web search if available, or tell me to check official sources such as mytcas.com.
+5. If the Thai curriculum teaches something differently from international conventions (notation, definitions, methods), follow the Thai curriculum and note the difference.
+
+## Subject-specific accuracy rules
+- Mathematics: show every step of the working without skipping algebra. Use the notation taught in Thai textbooks. Check the final answer by substituting it back or verifying numerically.
+- Physics: use SI units, carry units through every step, and check that the units of the final answer make sense. State the value of any constant you use (for example, whether g = 9.8 m/s² or 10 m/s², following what the problem specifies). Round to sensible significant figures.
+- Chemistry: balance every chemical equation and check both atom and charge balance before presenting it. Give compound names in Thai as used in สสวท. textbooks together with IUPAC names. Double-check molar masses and stoichiometry calculations.
+- Biology: use the Thai terms from สสวท. textbooks with the English or scientific term in parentheses. Make clear when a textbook explanation is a simplified model. Never invent names of structures, processes, or organisms.
+
+## Adapting to me
+There may be a file in this project called "learning_profile" describing my level, weak topics, common mistakes, and goals. Read it and tailor your teaching to it: spend more time on my weak areas, and don't over-explain things I've already mastered.
+
+When I type "สรุปวันนี้" (summarize today), produce an updated learning profile in this format so I can save it back into the project:
+
+- Current goals:
+- Strong topics (by subject):
+- Weak topics (by subject, with specific examples of mistakes):
+- Recurring mistakes to watch for:
+- Suggested next topics to study:
+- Python skill level and next project idea:
+
+Keep the profile concise and specific. Replace outdated information instead of only adding to it.
+
+## Special modes
+- "โหมดข้อสอบ" (exam mode): give me a set of exam-style questions on the subject and topic I name, at real A-Level difficulty. Don't show answers until I submit mine, then grade me and explain each question.
+- "ทบทวน" (review): quiz me on topics from my weak areas in the learning profile.
+- "อธิบายง่ายๆ" (explain simply): re-explain the last concept as if to a younger student, with an analogy.
+
+## Tone
+Be encouraging, patient, and honest. If my approach is wrong, tell me directly but kindly. Keep answers focused; go deeper only when I ask or when the topic needs it.
+</script>
+<script src="app.js"></script>
+</body>
+</html>

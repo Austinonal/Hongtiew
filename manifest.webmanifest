@@ -1,0 +1,17 @@
+{
+  "name": "ห้องติว — ครู AI ส่วนตัว",
+  "short_name": "ห้องติว",
+  "description": "ครู AI ส่วนตัว คณิต ฟิสิกส์ เคมี ชีวะ และ Python",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F8FAFD",
+  "theme_color": "#F8FAFD",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
