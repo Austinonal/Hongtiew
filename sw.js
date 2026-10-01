@@ -1,9 +1,9 @@
 /* Unnie Study service worker: keeps the app working offline; never caches API calls. */
-var CACHE = 'hongtiew-v3.1.1'; // keep in sync with VERSION in app.js
+var CACHE = 'hongtiew-v3.1.5'; // keep in sync with VERSION in app.js
 var CORE = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'vendor/marked.min.js', 'vendor/purify.min.js', 'vendor/mathjax/tex-svg.js',
-  'vendor/mathjax/input/tex/extensions/mhchem.js', 'vendor/mammoth.browser.min.js', 'vendor/jszip.min.js',
+  'vendor/mathjax/input/tex/extensions/mhchem.js', 'vendor/mammoth.browser.min.js', 'vendor/jszip.min.js', 'vendor/pdf-lib.min.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png'
 ];
 self.addEventListener('install', function (e) {
