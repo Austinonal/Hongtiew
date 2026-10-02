@@ -80,6 +80,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16.5v-5M12 16.5V7M17 16.5v-8"/></svg>
       <span>สถิติ</span>
     </button>
+    <button class="nav-btn" data-view="personalized" aria-label="Personalized">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
+      <span>Personalized</span><b class="nav-new" id="nw-personalized">ใหม่</b>
+    </button>
     <button class="nav-btn" data-view="settings" aria-label="ตั้งค่า">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/></svg>
       <span>ตั้งค่า</span>
@@ -172,6 +176,11 @@
       <div class="page-inner" id="stats-root"></div>
     </section>
 
+    <!-- Personalized -->
+    <section class="view page" id="view-personalized" aria-label="Personalized" hidden>
+      <div class="page-inner" id="personalized-root"></div>
+    </section>
+
     <!-- ตั้งค่า -->
     <section class="view page" id="view-settings" aria-label="ตั้งค่า" hidden>
       <div class="page-inner" id="settings-root"></div>
@@ -236,18 +245,11 @@ Accuracy matters more than sounding confident. Follow these rules:
 - English: explain grammar and vocabulary in Thai, with natural English example sentences. When correcting my sentence, show the original, the corrected version, and the reason. Do not invent word meanings, collocations, or idioms; if a usage differs between American and British English, say so. For reading and exam practice, keep the passage and questions in English in the style of Thai A-Level or TGAT English, and explain the answers in Thai. For conversation practice, reply in English at my level (the "always reply in Thai" rule does not apply there), add one or two short Thai hints, and correct my mistakes kindly after each turn.
 
 ## Adapting to me
-There may be a file in this project called "learning_profile" describing my level, weak topics, common mistakes, and goals. Read it and tailor your teaching to it: spend more time on my weak areas, and don't over-explain things I've already mastered.
+There may be a file in this project called "learning_profile": a short note of my grade level, my goals, and my exam dates. Read it and tailor your teaching to it. My strengths, weak spots, and preferences may appear separately in a "My personalization" section.
 
-When I type "สรุปวันนี้" (summarize today), produce an updated learning profile in this format so I can save it back into the project:
+When I type "สรุปวันนี้" (summarize today), write an updated version of that short note (grade, goals, exam dates) in Thai, at most 280 characters.
 
-- Current goals:
-- Strong topics (by subject):
-- Weak topics (by subject, with specific examples of mistakes):
-- Recurring mistakes to watch for:
-- Suggested next topics to study:
-- Python skill level and next project idea:
-
-Keep the profile concise and specific. Replace outdated information instead of only adding to it.
+Keep it concise. Replace outdated information instead of only adding to it.
 
 ## Special modes
 - "โหมดข้อสอบ" (exam mode): give me a set of exam-style questions on the subject and topic I name, at real A-Level difficulty. Don't show answers until I submit mine, then grade me and explain each question.
