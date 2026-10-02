@@ -43,9 +43,11 @@
 <script src="vendor/purify.min.js"></script>
 </head>
 <body>
-<div class="shell">
-  <nav class="nav" aria-label="เมนูหลัก">
+<div class="shell" id="shell" data-side="closed">
+  <aside class="side" id="side" aria-label="เมนูหลัก">
     <div class="nav-brand">Unnie Study<small>언니 공부방</small></div>
+    <label class="side-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input id="hist-q" type="search" placeholder="ค้นหาบทเรียน" aria-label="ค้นหาบทเรียน" autocomplete="off"></label>
+    <nav class="nav" aria-label="เมนูหลัก">
     <button class="nav-btn" data-view="chat" aria-label="เรียน">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11.5a2 2 0 0 1 2 2V19a.5.5 0 0 1-.8.4L14.5 17H5a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z"/><path d="M8 9h7M8 12.5h4.5"/></svg>
       <span>เรียน</span>
@@ -56,7 +58,23 @@
     </button>
     <button class="nav-btn" data-view="review" aria-label="ทบทวน">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="14" height="10" rx="1.5"/><path d="M7 3.5h12a1.5 1.5 0 0 1 1.5 1.5v9"/><path d="M6.5 9.5h8"/></svg>
-      <span>ทบทวน</span><b class="nav-badge" id="due-badge" hidden></b>
+      <span>ทบทวน</span>
+    </button>
+    <button class="nav-btn" data-view="notebook" aria-label="สมุดข้อผิด">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2z"/><path d="M9 9l5 5M14 9l-5 5"/></svg>
+      <span>สมุดข้อผิด</span><b class="nav-new" id="nw-notebook">ใหม่</b><b class="nav-badge" id="nb-badge" hidden></b>
+    </button>
+    <button class="nav-btn" data-view="mastery" aria-label="Mastery">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v7M12 10H6v4M12 10h6v4M6 14v6M18 14v6"/><circle cx="6" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+      <span>Mastery</span><b class="nav-new" id="nw-mastery">ใหม่</b>
+    </button>
+    <button class="nav-btn" data-view="kmap" aria-label="Knowledge Map">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M12 7v4M12 11l-6 5M12 11l6 5"/></svg>
+      <span>Knowledge Map</span><b class="nav-new" id="nw-kmap">ใหม่</b>
+    </button>
+    <button class="nav-btn" data-view="flash" aria-label="Flashcard">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="14" height="10" rx="1.5"/><path d="M7 3.5h12a1.5 1.5 0 0 1 1.5 1.5v9"/><path d="M6.5 9.5h8"/></svg>
+      <span>Flashcard</span><b class="nav-new" id="nw-flash">ใหม่</b><b class="nav-badge" id="due-badge" hidden></b>
     </button>
     <button class="nav-btn" data-view="stats" aria-label="สถิติ">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16.5v-5M12 16.5V7M17 16.5v-8"/></svg>
@@ -66,20 +84,21 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/></svg>
       <span>ตั้งค่า</span>
     </button>
-  </nav>
+    </nav>
+    <div class="side-sec">บทเรียนล่าสุด</div>
+    <ul class="hist" id="history-list"></ul>
+    <div class="side-foot"><button class="newbtn" id="btn-new" type="button" aria-label="เริ่มบทเรียนใหม่"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>บทเรียนใหม่</button></div>
+  </aside>
+
+  <div class="app-main" id="main">
+  <header class="appbar">
+    <button class="menu-btn" id="btn-menu" type="button" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h16"/></svg><i class="menu-dot" id="menu-dot" hidden></i></button>
+    <div class="appbar-title" id="session-title" role="heading" aria-level="1">บทเรียนใหม่</div>
+  </header>
 
   <main class="views">
     <!-- เรียน -->
     <section class="view" id="view-chat" aria-label="เรียน">
-      <header class="top">
-        <button class="title-btn" id="btn-history" aria-label="เปิดประวัติบทเรียน">
-          <span class="title-text" id="session-title">บทเรียนใหม่</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
-        </button>
-        <button class="hbtn" id="btn-new" aria-label="เริ่มบทเรียนใหม่">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>บทเรียนใหม่</span>
-        </button>
-      </header>
       <div class="subjects" id="subjects" role="group" aria-label="เลือกวิชา"></div>
       <div class="band" id="subj-band" hidden></div>
       <div class="chat" id="chat"><div class="thread" id="thread"></div></div>
@@ -130,6 +149,24 @@
       <div class="page-inner" id="review-root"></div>
     </section>
 
+    <!-- สมุดข้อผิด -->
+    <section class="view page" id="view-notebook" aria-label="สมุดข้อผิด" hidden>
+      <div class="page-inner" id="notebook-root"></div>
+    </section>
+
+    <!-- Mastery -->
+    <section class="view page" id="view-mastery" aria-label="Mastery" hidden>
+      <div class="page-inner" id="mastery-root"></div>
+    </section>
+    <!-- Knowledge Map -->
+    <section class="view page" id="view-kmap" aria-label="Knowledge Map" hidden>
+      <div class="page-inner km-inner" id="kmap-root"></div>
+    </section>
+
+    <!-- Flashcard -->
+    <section class="view page" id="view-flash" aria-label="Flashcard" hidden>
+      <div class="page-inner km-inner" id="flash-root"></div>
+    </section>
     <!-- ก้าวหน้า -->
     <section class="view page" id="view-stats" aria-label="ความก้าวหน้า" hidden>
       <div class="page-inner" id="stats-root"></div>
@@ -139,36 +176,21 @@
     <section class="view page" id="view-settings" aria-label="ตั้งค่า" hidden>
       <div class="page-inner" id="settings-root"></div>
     </section>
+    <!-- เครื่องมือช่วยเรียน (เดิมเป็นลิ้นชักขวา ตอนนี้เป็นหน้าของตัวเอง ไม่ทับแชต) -->
+    <section class="view page" id="view-tools" aria-label="เครื่องมือช่วยเรียน" hidden>
+      <div class="page-inner">
+        <button class="back-link" id="tools-back" type="button">‹ กลับ</button>
+        <h1 class="page-title">เครื่องมือช่วยเรียน</h1>
+        <div class="tb-target" id="tb-target"></div>
+        <label class="muted" for="tb-topic">หัวข้อหรือขอบเขต (ไม่บังคับ)</label>
+        <input class="text" id="tb-topic" type="text" placeholder="เช่น พันธะเคมี หรือ หน้า 10–25">
+        <ul class="tb-list" id="tb-list"></ul>
+      </div>
+    </section>
   </main>
+  <div class="side-dim" id="side-dim"></div>
+  </div>
 </div>
-
-<div class="drawer" id="drawer-history" aria-hidden="true">
-  <div class="scrim" data-close></div>
-  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="h-history">
-    <div class="panel-head">
-      <h2 id="h-history">ประวัติบทเรียน</h2>
-      <button class="hbtn" data-close aria-label="ปิด"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div class="panel-body"><ul class="hist" id="history-list"></ul></div>
-  </section>
-</div>
-
-<div class="drawer" id="drawer-tools" aria-hidden="true">
-  <div class="scrim" data-close></div>
-  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="h-tools">
-    <div class="panel-head">
-      <h2 id="h-tools">เครื่องมือช่วยเรียน</h2>
-      <button class="hbtn" data-close aria-label="ปิด"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div class="panel-body">
-      <div class="tb-target" id="tb-target"></div>
-      <label class="muted" for="tb-topic">หัวข้อหรือขอบเขต (ไม่บังคับ)</label>
-      <input class="text" id="tb-topic" type="text" placeholder="เช่น พันธะเคมี หรือ หน้า 10–25">
-      <ul class="tb-list" id="tb-list"></ul>
-    </div>
-  </section>
-</div>
-
 <div class="onboard" id="onboard" hidden></div>
 <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button id="toast-action" hidden></button></div>
 <div class="drop" aria-hidden="true">วางไฟล์ตรงนี้เพื่อให้พี่สาวอ่าน</div>

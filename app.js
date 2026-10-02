@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '3.1.5';
+  var VERSION = '3.2.0';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
@@ -37,25 +37,18 @@
   // Each subject is its own window: own chat, colours, header, starter questions and quick tools
   var SUBJECT_UI = {
     math: { glyph: '∑', title: 'คณิตศาสตร์', sub: 'สมการ กราฟ ตรีโกณ แคลคูลัส', hello: 'มาฝึกคณิตกัน', lead: 'พิมพ์โจทย์หรือถ่ายรูปมา พี่สาวจะแสดงวิธีทำทีละขั้นและตรวจคำตอบให้',
-      starts: ['วาดกราฟ y = x² − 4x + 3 แล้วอธิบายจุดตัดแกน', 'แก้อสมการ |2x − 1| < 5 ทีละขั้น', 'ทำไม sin²θ + cos²θ = 1 อธิบายให้เห็นภาพหน่อย', 'หาอนุพันธ์ของ f(x) = x³ − 6x² + 9x แล้วหาจุดสูงสุด-ต่ำสุด', 'อธิบายลำดับเลขคณิตกับเรขาคณิต พร้อมสูตรผลรวม', 'ทอยลูกเต๋า 2 ลูก โอกาสที่ผลรวมเท่ากับ 7 คือเท่าไร', 'ลอการิทึมคืออะไร แก้สมการ log₂(x + 1) = 3', 'จัดหมู่กับสับเปลี่ยนต่างกันอย่างไร ยกตัวอย่างโจทย์', 'หาอินเวอร์สของเมทริกซ์ 2×2 ทีละขั้น', 'อธิบายลิมิตของ sin x / x เมื่อ x เข้าใกล้ 0', 'ค่าเฉลี่ย มัธยฐาน ฐานนิยม ต่างกันอย่างไร ใช้ตัวไหนเมื่อไร', 'หาระยะจากจุด (1, 2) ถึงเส้นตรง 3x + 4y − 5 = 0'],
       tools: [['แสดงวิธีทำ', 'ให้พี่สาวแสดงวิธีทำทีละขั้น'], ['ตรวจคำตอบ', 'ให้พี่สาวตรวจคำตอบของคุณ'], ['ออกข้อคล้ายกัน', 'ให้พี่สาวออกข้อคล้ายกันให้ฝึก']] },
     physics: { glyph: 'F=ma', title: 'ฟิสิกส์', sub: 'แรง พลังงาน ไฟฟ้า คลื่น', hello: 'มาเรียนฟิสิกส์กัน', lead: 'พี่สาวจะเช็กหน่วยและคำนวณด้วยโค้ดจริง เพื่อไม่ให้ตัวเลขผิด',
-      starts: ['อธิบายกฎการเคลื่อนที่ข้อที่ 2 ของนิวตัน พร้อมโจทย์ตัวอย่าง 1 ข้อ', 'วัตถุตกอย่างอิสระ 5 วินาที ตกไปไกลเท่าไร', 'ความต่างระหว่างงานกับพลังงานคืออะไร', 'แรงเสียดทานสถิตกับจลน์ต่างกันอย่างไร พร้อมโจทย์', 'ยิงวัตถุทำมุม 30° ระยะไกลสุดหาอย่างไร (โพรเจกไทล์)', 'วงจรอนุกรมกับขนานต่างกันอย่างไร ใช้กฎของโอห์มหาอย่างไร', 'โมเมนตัมและการชนแบบยืดหยุ่น อธิบายพร้อมตัวอย่าง', 'ความถี่ ความยาวคลื่น และอัตราเร็วคลื่นเกี่ยวกันอย่างไร', 'ใช้กฎอนุรักษ์พลังงานกับรถไฟเหาะอย่างไร', 'ผสมน้ำร้อนกับน้ำเย็น คำนวณอุณหภูมิสุดท้ายอย่างไร', 'แรงลอยตัวและหลักของอาร์คิมีดีส อธิบายให้เห็นภาพ', 'สนามไฟฟ้ากับสนามแม่เหล็กต่างกันอย่างไร'],
       tools: [['วาดแผนภาพแรง', 'ให้พี่สาวบอกแรงทุกตัวที่กระทำกับวัตถุ'], ['เช็กหน่วย', 'ให้พี่สาวเช็กหน่วยของคำตอบ'], ['ตัวอย่างโจทย์', 'ให้พี่สาวยกโจทย์ตัวอย่างพร้อมวิธีทำ']] },
     chem: { glyph: 'H₂O', title: 'เคมี', sub: 'สมการ ปริมาณสาร สมดุล กรด-เบส', hello: 'มาเรียนเคมีกัน', lead: 'สมการและสูตรเคมีจะแสดงเป็นสัญลักษณ์ที่อ่านง่าย และดุลสมการให้ทีละขั้น',
-      starts: ['ดุลสมการ Fe + O₂ → Fe₂O₃ ให้ดูทีละขั้น', 'คำนวณโมลของ NaCl 11.7 กรัม', 'ความต่างระหว่างกรดแก่กับกรดอ่อนคืออะไร', 'คำนวณ pH ของสารละลาย HCl 0.01 โมลาร์', 'พันธะไอออนิกกับพันธะโคเวเลนต์ต่างกันอย่างไร', 'หลักของเลอชาเตอริเยร์ อธิบายด้วยตัวอย่างสมดุล', 'ผสม NaOH 0.1 M 50 mL กับ HCl 0.1 M 30 mL เหลือกรดหรือเบส', 'แนวโน้มรัศมีอะตอมและพลังงานไอออไนเซชันในตารางธาตุ', 'หาเลขออกซิเดชันและตัวรีดิวซ์ในปฏิกิริยารีดอกซ์', 'เรียกชื่ออัลเคนกับอัลคีนอย่างไร', 'สารกำหนดปริมาณคืออะไร พร้อมโจทย์', 'อัตราการเกิดปฏิกิริยาขึ้นกับอะไรบ้าง'],
       tools: [['ดุลสมการ', 'ให้พี่สาวดุลสมการทีละขั้น'], ['คำนวณโมล', 'ให้พี่สาวคำนวณปริมาณสารทีละขั้น'], ['ตารางธาตุ', 'ให้พี่สาวสรุปสมบัติของธาตุที่ถาม']] },
     bio: { glyph: 'DNA', title: 'ชีววิทยา', sub: 'เซลล์ พันธุกรรม ระบบในร่างกาย นิเวศ', hello: 'มาเรียนชีวะกัน', lead: 'ศัพท์ใช้ตามหนังสือ สสวท. มีคำอังกฤษกำกับ และมีตารางเปรียบเทียบให้จำง่าย',
-      starts: ['สรุปความต่างของไมโทซิสกับไมโอซิสให้จำง่าย', 'อธิบายกระบวนการสังเคราะห์ด้วยแสงทีละขั้น', 'พันธุกรรมแบบเมนเดล ทำโจทย์ผสมพันธุ์ 2 ลักษณะอย่างไร', 'DNA จำลองตัวเองอย่างไร อธิบายทีละขั้น', 'ไกลโคลิซิส วัฏจักรเครบส์ และ ETC ต่างกันอย่างไร', 'เซลล์เม็ดเลือดขาวแต่ละชนิดทำหน้าที่อะไรในภูมิคุ้มกัน', 'ทรานสคริปชันกับทรานสเลชันต่างกันอย่างไร', 'เลือดไหลผ่านหัวใจของมนุษย์อย่างไร', 'ห่วงโซ่อาหารกับการถ่ายทอดพลังงานในระบบนิเวศ', 'การคัดเลือกโดยธรรมชาติ ยกตัวอย่างให้เห็นภาพ', 'ฮอร์โมนกับการควบคุมแบบป้อนกลับทำงานอย่างไร', 'ออสโมซิสกับการแพร่ต่างกันอย่างไร'],
       tools: [['เปรียบเทียบเป็นตาราง', 'ให้พี่สาวทำตารางเปรียบเทียบ'], ['ท่องศัพท์', 'ให้พี่สาวสรุปศัพท์สำคัญพร้อมคำอังกฤษ'], ['ตัวอย่างข้อสอบ', 'ให้พี่สาวยกตัวอย่างข้อสอบเรื่องที่คุยอยู่']] },
     python: { glyph: '</>', title: 'Python', sub: 'โค้ด อัลกอริทึม แก้บั๊ก', hello: 'มาเขียน Python กัน', lead: 'พี่สาวรันโค้ดให้ดูผลจริง และอธิบายบรรทัดที่ผิดทีละบรรทัด',
-      starts: ['สอนเขียน for loop ใน Python ตั้งแต่พื้นฐาน', 'ช่วยหาบั๊กในโค้ดนี้ให้หน่อย', 'อธิบาย list comprehension พร้อมตัวอย่าง', 'dictionary ใช้ทำอะไร สอนใช้ทีละขั้น', 'ฟังก์ชัน return ต่างจาก print อย่างไร', 'เขียนเกมทายตัวเลขง่ายๆ ด้วย Python', 'อ่านและเขียนไฟล์ข้อความใน Python', 'while loop กับ for loop เลือกใช้ตัวไหนเมื่อไร', 'เรียงข้อมูลด้วย sorted และ key ทำอย่างไร', 'try / except จัดการข้อผิดพลาดอย่างไร', 'เขียนโปรแกรมหาจำนวนเฉพาะทีละขั้น', 'พล็อตกราฟ y = x² ด้วย matplotlib เบื้องต้น'],
       tools: [['รันโค้ดตัวอย่าง', 'ให้พี่สาวรันโค้ดตัวอย่างให้ดูผลจริง'], ['หาบั๊ก', 'ให้พี่สาวหาบั๊กในโค้ดที่คุยอยู่'], ['ออกโจทย์ฝึก', 'ให้พี่สาวออกโจทย์ Python ให้ฝึก']] },
     english: { glyph: 'Aa', title: 'ภาษาอังกฤษ', sub: 'ไวยากรณ์ ศัพท์ อ่าน เขียน สนทนา TGAT อังกฤษ', hello: 'มาฝึกภาษาอังกฤษกัน', lead: 'พี่สาวอธิบายเป็นภาษาไทย ยกตัวอย่างประโยคอังกฤษ แก้แกรมมาร์พร้อมเหตุผล และฝึกแบบที่ออกสอบจริง',
-      starts: ['อธิบาย Present Perfect กับ Past Simple ต่างกันอย่างไร พร้อมตัวอย่าง', 'ช่วยตรวจประโยคนี้ให้หน่อย: "I am agree with you."', 'a / an / the ใช้ต่างกันอย่างไร ทำไมถึงสับสนบ่อย', 'สอนจับใจความสำคัญของบทอ่าน (Reading) ในข้อสอบ TGAT อังกฤษ', 'แนะนำวิธีจำคำศัพท์วันละ 20 คำให้จำได้นาน', 'Conditional type 1, 2, 3 ต่างกันอย่างไร ทำโจทย์ให้ดูทีละข้อ', 'เปลี่ยน Active เป็น Passive Voice ทีละขั้นทำอย่างไร', 'ช่วยเขียนอีเมลภาษาอังกฤษสั้นๆ ขอเลื่อนส่งงานกับอาจารย์', 'Phrasal verbs ที่ออกสอบบ่อยมีอะไรบ้าง ขอ 10 คำพร้อมตัวอย่าง', 'เทคนิคทำข้อสอบเติมคำ (Cloze test) ให้เร็วและแม่น', 'ฝึกสนทนาภาษาอังกฤษกับพี่สาวหน่อย เริ่มจากแนะนำตัว', 'Relative clause (who, which, that) ใช้เมื่อไร ต่างกันอย่างไร'],
       tools: [['แก้ไวยากรณ์', 'ให้พี่สาวแก้ประโยคพร้อมอธิบายเหตุผล'], ['ท่องศัพท์', 'ให้พี่สาวสรุปศัพท์พร้อมตัวอย่างประโยค'], ['ฝึกอ่านจับใจความ', 'ให้พี่สาวออกบทอ่านสั้นๆ พร้อมคำถามให้ฝึก']] },
     other: { glyph: 'Hi', title: 'คุยเรื่องอื่นๆ', sub: 'ปรึกษา วางแผน ไอเดีย ระบายได้', hello: 'วันนี้อยากคุยเรื่องอะไร', lead: 'ไม่ใช่เรื่องเรียนก็คุยได้ พี่สาวฟังและช่วยคิด ถ้าเรื่องหนักใจมากๆ ลองคุยกับคนที่ไว้ใจด้วยนะ',
-      starts: ['ยังไม่รู้จะเลือกคณะอะไร ช่วยคิดไปด้วยกันหน่อย', 'TCAS มีกี่รอบ แต่ละรอบต่างกันอย่างไร', 'ขี้เกียจอ่านหนังสือมาก ช่วยหาวิธีเริ่มลงมือทีละนิด', 'ช่วยเขียนแนะนำตัวสำหรับสมัครรอบพอร์ตให้หน่อย', 'สอบเสร็จแล้วกังวลผลมาก ทำยังไงให้ใจสงบ', 'วางแผนวันหยุดยาวให้ได้ทั้งพักและอ่านหนังสือ', 'จดโน้ตแบบไหนเหมาะกับเรา มีวิธีจดกี่แบบ', 'เพื่อนชวนไปเที่ยวแต่ใกล้สอบ ควรไปไหม', 'อาชีพที่ฉันชอบต้องเรียนคณะไหนบ้าง', 'นอนไม่หลับช่วงสอบ มีวิธีอะไรช่วยบ้าง', 'แนะนำช่องหรือหนังสือที่ช่วยให้มีแรงบันดาลใจในการเรียน', 'วันนี้เหนื่อยๆ อยากระบายให้พี่สาวฟังหน่อย'],
       tools: [['ช่วยคิดไอเดีย', 'ให้พี่สาวช่วยคิดไอเดียหลายทางให้เลือก'], ['สรุปเป็นข้อๆ', 'ให้พี่สาวสรุปเรื่องที่คุยเป็นข้อๆ'], ['ฟังฉันก่อน', 'ให้พี่สาวฟังก่อนโดยยังไม่ให้คำแนะนำ']] }
   };
 
@@ -101,6 +94,7 @@
         + (o.mistakes ? 'Target the concepts behind my recent quiz mistakes listed in the system instructions, using new numbers and contexts rather than repeating the same questions. ' : '')
         + 'Mostly multiple-choice questions with 5 choices and exactly one correct answer, in the style of Thai A-Level exams. When the content involves calculation, make about a third of the questions "numeric" fill-in questions whose answer is a single number. Make wrong choices plausible, based on real common mistakes. '
         + 'Before finalizing, verify every answer key' + (S.codeExec ? ' with the code execution tool for any numeric work' : ' by working it out carefully') + '. '
+        + 'Tagging: set "topic" to the broad chapter-level topic from the Thai curriculum (for example พันธุศาสตร์) and "subtopic" to the specific sub-topic (for example Mutation), reusing exactly the same names for the same topics across questions. For every multiple-choice question also fill "wrong_why" and "error_types" as arrays aligned one-to-one with the choices array: for each wrong choice give a short Thai reason (at most 20 words) describing the misconception that leads a student to pick it, and its error type (concept = misunderstood the principle, recall = remembered a fact or formula wrongly, calc = calculation or sign slip, read = misread the question, careless = careless slip); for the correct choice use an empty string and "none". For numeric questions fill "common_error" (the most likely wrong approach, in Thai) and "error_type" instead. '
         + 'Write in Thai (technical terms may stay in English); use $...$ LaTeX for math and \\ce{} for chemistry, escaping backslashes properly in JSON. In explanation, trap, and technique, refer to choices by their content, never by letter or number, because the choices will be shuffled. For numeric questions, leave choices empty and give numeric_answer and unit.';
     },
     cards: function (o) {
@@ -119,7 +113,8 @@
           properties: {
             type: { type: 'string', enum: ['mcq', 'numeric'] },
             subject: { type: 'string', enum: ['math', 'physics', 'chem', 'bio', 'python', 'english', 'other'] },
-            topic: { type: 'string', description: 'Short topic name in Thai' },
+            topic: { type: 'string', description: 'Broad chapter-level topic in Thai, same name for the same topic across questions' },
+            subtopic: { type: 'string', description: 'Specific sub-topic in Thai, same name for the same sub-topic across questions' },
             question: { type: 'string' },
             choices: { type: 'array', items: { type: 'string' }, description: '5 choices for mcq, empty for numeric' },
             answer_index: { type: 'integer', description: 'Index of the correct choice for mcq' },
@@ -127,6 +122,10 @@
             unit: { type: 'string', description: 'Unit of the numeric answer, or empty' },
             explanation: { type: 'string', description: 'Step-by-step reason the answer is right' },
             trap: { type: 'string', description: 'The trap choice or common mistake, and why students fall for it' },
+            wrong_why: { type: 'array', items: { type: 'string' }, description: 'mcq only, aligned with choices: for each wrong choice a short Thai reason (max 20 words) for the misconception; empty string for the correct choice' },
+            error_types: { type: 'array', items: { type: 'string', enum: ['concept', 'recall', 'calc', 'read', 'careless', 'none'] }, description: 'mcq only, aligned with choices: error type of choosing that wrong choice; none for the correct choice' },
+            common_error: { type: 'string', description: 'numeric only: the most likely wrong approach, in Thai' },
+            error_type: { type: 'string', enum: ['concept', 'recall', 'calc', 'read', 'careless', 'none'], description: 'numeric only: error type of that wrong approach' },
             technique: { type: 'string', description: 'A quick technique for this type of question' },
             source: { type: 'string', description: 'Page or slide in the file if used, else empty' }
           },
@@ -394,6 +393,11 @@
     pendingImages: [],
     autoScroll: true,
     view: 'chat',
+    hist: [],
+    errbook: [],
+    flashDecks: [],
+    mastery: { trees: {} },
+    msCache: [],
     dueCount: 0,
     planner: { exams: [], tasks: [], chat: [] },
     skills: [],
@@ -438,7 +442,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       var snap = { id: s.id, title: s.title, subject: s.subject, updatedAt: s.updatedAt, tok: s.tok || null, materialIds: (s.materialIds || []).slice(), matScope: JSON.parse(JSON.stringify(s.matScope || {})), messages: s.messages.map(cleanMsg).filter(function (m) { return m.content || m.error || m.kind === 'material'; }).slice(-120) };
-      DB.put('sessions', snap).catch(function () { showToast('บันทึกบทเรียนไม่สำเร็จ พื้นที่ในเครื่องอาจเต็ม'); });
+      DB.put('sessions', snap).then(function () { histUpsert(snap); }).catch(function () { showToast('บันทึกบทเรียนไม่สำเร็จ พื้นที่ในเครื่องอาจเต็ม'); });
     }, 300);
   }
   function cleanMsg(m) {
@@ -1136,7 +1140,7 @@
     s = s.replace(/\u0000C(\d+)\u0000/g, function (_, i) { return codeStash[+i]; });
     var html = window.marked && window.marked.parse ? window.marked.parse(s, { gfm: true, breaks: true }) : '<p>' + escapeHtml(s).replace(/\n/g, '<br>') + '</p>';
     html = html.replace(/MJXTOKEN(\d+)END/g, function (_, i) { return escapeHtml(mathStash[+i]); });
-    if (window.DOMPurify) html = window.DOMPurify.sanitize(html);
+    html = window.DOMPurify ? window.DOMPurify.sanitize(html) : escapeHtml(html); // 3.1.6: never render unsanitized HTML if DOMPurify failed to load
     return html;
   }
   function renderInline(src) { var html = renderMarkdown(src); var m = html.match(/^\s*<p>([\s\S]*)<\/p>\s*$/); return m && m[1].indexOf('<p>') === -1 ? m[1] : html; }
@@ -1172,27 +1176,92 @@
 
   // starter questions only fill the box; nothing is sent until I press send
   function fillInput(t) { input.value = t; autosize(); updateComposer(); input.focus(); }
-  // Starter questions come from a pool per subject (no AI call, no tokens). A new set is drawn each time a
-  // window is opened or a chat is started, preferring questions that were not in the previous set.
-  var STARTER_SET = {};
-  function rollStarters(id) {
-    var prev = (STARTER_SET[id] || []).map(function (x) { return x.t; });
-    function shuf(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-    function pick(pool, n) { var fresh = pool.filter(function (q) { return prev.indexOf(q) === -1; }); return shuf((fresh.length >= n ? fresh : pool).slice()).slice(0, n); }
-    STARTER_SET[id] = SUBJECT_UI[id]
-      ? pick(SUBJECT_UI[id].starts, 3).map(function (t) { return { s: id, t: t }; })
-      : shuf(Object.keys(SUBJECT_UI).map(function (s) { return { s: s, t: pick(SUBJECT_UI[s].starts, 1)[0] }; })).slice(0, 5);
-    return STARTER_SET[id];
+  // "continue the latest chat of this subject" shortcut on the start page (choosing a subject no longer jumps into an old chat)
+  function resumeNode(cur) {
+    var last = (state.hist || []).filter(function (x) { return (x.subject || 'all') === cur && x.n && x.id !== state.session.id; })[0];
+    if (!last) return null;
+    return h('button', { class: 'resume', type: 'button', onclick: function () { openSessionById(last.id); } }, [
+      h('span', null, [h('small', { text: 'คุยต่อแชตล่าสุด' }), h('b', { text: last.title || 'บทเรียน' })]),
+      h('em', { text: '›', 'aria-hidden': 'true' })
+    ]);
+  }
+  // ---- greeting card on the start page: time-of-day greeting, sky emoji, and a line that keeps changing ----
+  var SKY = [
+    { a: 0, b: 270, n: 'ดึกแล้วนะ', e: ['🌙', '✨'], l: 'พักสายตาสักนิด อ่านเบาๆ แล้วนอนเอาแรงนะ', g: ['#2B3350', '#171B2E'], c: '#EAEAF5' },
+    { a: 270, b: 420, n: 'สวัสดีตอนเช้าตรู่', e: ['🌅', '🐦'], l: 'ตื่นเช้าจัง ดื่มน้ำสักแก้วก่อนเริ่มนะ', g: ['#F7C6A0', '#C9B3E0'], c: '#2F2B29' },
+    { a: 420, b: 660, n: 'สวัสดีตอนเช้า', e: ['🌤️', '☕'], l: 'เช้าสดใส เริ่มจากเรื่องที่ยากสุดตอนสมองโล่ง', g: ['#FFE9A8', '#BFE0F0'], c: '#2F2B29' },
+    { a: 660, b: 810, n: 'สวัสดีตอนเที่ยง', e: ['☀️', '🍚'], l: 'ได้เวลาพักกินข้าว แล้วค่อยมาต่อนะ', g: ['#FFF0B0', '#9ED3F0'], c: '#2F2B29' },
+    { a: 810, b: 990, n: 'สวัสดีตอนบ่าย', e: ['⛅', '📖'], l: 'ช่วงบ่ายง่วงง่าย ลุกยืดตัวแล้วอ่านรอบสั้นๆ', g: ['#CFE6F5', '#F4E3B5'], c: '#2F2B29' },
+    { a: 990, b: 1110, n: 'สวัสดีตอนเย็น', e: ['🌇', '🍃'], l: 'เย็นนี้ทบทวนเบาๆ ให้ได้ทั้งความรู้และพัก', g: ['#F6B58F', '#B79AD0'], c: '#2F2B29' },
+    { a: 1110, b: 1320, n: 'สวัสดีตอนค่ำ', e: ['🌆', '🌙'], l: 'ค่ำแล้ว ทบทวนบัตรคำสัก 10 ใบแล้วพักผ่อนนะ', g: ['#4B4A7A', '#26264A'], c: '#F2F0FA' },
+    { a: 1320, b: 1440, n: 'ดึกแล้วนะ', e: ['🌙', '✨'], l: 'พักสายตาสักนิด อ่านเบาๆ แล้วนอนเอาแรงนะ', g: ['#2B3350', '#171B2E'], c: '#EAEAF5' }
+  ];
+  function skyNow() { var d = new Date(), m = d.getHours() * 60 + d.getMinutes(); return SKY.filter(function (x) { return m >= x.a && m < x.b; })[0] || SKY[0]; }
+  // only lines backed by the user's own data are offered (no card line when nothing is due, no exam line without an exam ...)
+  function greetLines(sky) {
+    var L = [], n = state.dueCount;
+    if (n) { L.push('วันนี้มีบัตรคำครบกำหนดทบทวน ' + n + ' ใบ ใช้เวลาไม่กี่นาที'); L.push('บัตรคำ ' + n + ' ใบกำลังรอคุณอยู่ ทบทวนตอนนี้จำได้นานกว่าเดิมเยอะเลย'); }
+    var P = state.planner || { exams: [], tasks: [] };
+    var up = (P.exams || []).filter(function (e) { return daysUntil(e.date) >= 0; }).sort(byExamDate)[0];
+    if (up) {
+      var dd = daysUntil(up.date);
+      if (dd === 0) L.push('วันนี้วันสอบ ' + up.name + ' สู้ๆ นะ');
+      else { L.push('อีก ' + dd + ' วันถึง ' + up.name + ' วันละนิดก็ทันแน่นอน'); if (dd <= 7) L.push(up.name + ' อีก ' + dd + ' วันแล้วนะ วันนี้เก็บเรื่องไหนดี'); }
+    }
+    var today = planTasksFor(dayKey()).filter(function (t) { return !t.miss; });
+    if (today.length) {
+      var undone = today.filter(function (t) { return !t.done; }), left = undone.reduce(function (s, t) { return s + t.min; }, 0);
+      L.push('ตารางวันนี้ทำแล้ว ' + (today.length - undone.length) + ' จาก ' + today.length + ' รายการ' + (undone.length ? ' เหลืออีก ' + fmtHours(left) : ' ครบแล้ว เก่งมาก'));
+      if (undone.length) L.push('รายการถัดไป: ' + clip(undone[0].title, 50) + ' เริ่มได้เลยนะ');
+    }
+    if (state.streak) { L.push('เรียนต่อเนื่อง ' + state.streak + ' วันแล้ว อย่าให้สายนี้ขาดนะ'); if ((state.streak + 1) % 10 === 0) L.push('เหลืออีก 1 วันจะครบ ' + (state.streak + 1) + ' วันติด เก่งมาก'); }
+    L.push('วันนี้รู้สึกยังไงบ้าง เช็กอินสั้นๆ ในหน้าความก้าวหน้า แล้วพี่สาวจะช่วยปรับแผนให้');
+    L.push(sky.l);
+    L.push('ลองอธิบายสิ่งที่เพิ่งเรียนให้ตัวเองฟัง 1 นาที ช่วยให้จำได้ดีกว่าอ่านซ้ำ');
+    if (state.log && state.log.length) L.push('ข้อที่เคยผิดคือขุมทรัพย์ ลองฝึกข้อที่เคยพลาดสัก 3 ข้อ');
+    L.push('ถามทฤษฎี ถ่ายรูปโจทย์ หรือส่งชีทมาให้พี่สาวช่วยติวได้เลย');
+    if (S.codeExec) L.push('พี่สาวรันโค้ดเช็กคำตอบให้ ตัวเลขจะไม่ผิดแน่');
+    return L;
+  }
+  var greetIdx = -1, greetTimer = 0;
+  function nextGreet(animate) {
+    var el = $('greet-msg'); if (!el) return;
+    var L = greetLines(skyNow()), i = 0;
+    if (L.length > 1) { do { i = Math.floor(Math.random() * L.length); } while (i === greetIdx); }
+    greetIdx = i;
+    var p = el.parentNode, t = el.firstChild;
+    if (!animate) { el.textContent = L[i]; return; }
+    p.classList.add('fade');
+    setTimeout(function () { var e2 = $('greet-msg'); if (e2) e2.textContent = L[i]; p.classList.remove('fade'); }, 350);
+  }
+  function startGreetTimer() {
+    clearInterval(greetTimer);
+    greetTimer = setInterval(function () {
+      if (!$('greet-msg') || state.view !== 'chat' || document.hidden) { if (!$('greet-msg')) clearInterval(greetTimer); return; }
+      nextGreet(true);
+    }, 7000);
+  }
+  function greetCard() {
+    var sky = skyNow();
+    var msg = h('span', { id: 'greet-msg' });
+    var card = h('div', { class: 'hero sky', style: '--g1:' + sky.g[0] + ';--g2:' + sky.g[1] + ';--tc:' + sky.c }, [
+      h('div', { class: 'sky-emo', 'aria-hidden': 'true' }, [sky.e[0], h('small', { text: sky.e[1] })]),
+      h('h1', { text: sky.n }),
+      h('p', { class: 'lead' }, [msg, ' ', h('button', { class: 'greet-next', type: 'button', 'aria-label': 'ข้อความอื่น', title: 'ข้อความอื่น', text: '↻', onclick: function () { nextGreet(true); startGreetTimer(); } })]),
+      state.dueCount ? h('button', { class: 'cta', type: 'button', text: 'เริ่มทบทวนเลย', onclick: function () { showView('flash'); } }) : null,
+      state.streak ? h('span', { class: 'streak', text: 'เรียนต่อเนื่อง ' + state.streak + ' วัน' }) : null
+    ]);
+    setTimeout(function () { nextGreet(false); startGreetTimer(); }, 0);
+    return card;
+  }
+  function moodNudge() {
+    return h('button', { class: 'mood-nudge', type: 'button', onclick: function () { showView('stats'); } }, [
+      h('span', { html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16.5v-5M12 16.5V7M17 16.5v-8"/></svg>' }),
+      h('span', null, [h('b', { text: 'วันนี้รู้สึกยังไงบ้าง' }), h('small', { text: 'เช็กอินอารมณ์ 10 วินาที พี่สาวจะช่วยปรับแผน' })])
+    ]);
   }
   function renderEmpty() {
     var cur = state.subject(), ui = SUBJECT_UI[cur];
-    var list = h('ul', { class: 'sugg' });
-    (STARTER_SET[cur] || rollStarters(cur)).forEach(function (sg, i) {
-      list.appendChild(h('li', { style: '--i:' + i }, [h('button', { type: 'button', onclick: function () { if (sg.s === state.subject()) fillInput(sg.t); else setSubject(sg.s).then(function () { fillInput(sg.t); }); } }, [h('span', { class: 'sugg-subj', 'data-s': sg.s, text: SUBJECT_LABEL[sg.s] || '' }), h('span', { class: 'sugg-text', text: sg.t })])]));
-    });
-    var reroll = h('button', { class: 'reroll', type: 'button', 'aria-label': 'ขอคำถามชุดใหม่', onclick: function () { rollStarters(state.subject()); renderAll(); } },
-      [h('span', { html: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>' }), 'ขอคำถามชุดใหม่']);
-    var suggHead = h('div', { class: 'sec-row' }, [h('h2', { class: 'sec', text: ui ? 'ลองถามแบบนี้ (แตะแล้วใส่ในช่องพิมพ์ ยังไม่ส่ง)' : 'ลองถามแบบนี้' }), reroll]);
     var uploadBtn = h('button', { class: 'upload-cta', type: 'button', onclick: function () { fileInput.click(); } }, [h('span', { html: PAPERCLIP }), h('span', null, [h('span', { class: 't', text: 'ส่งไฟล์ให้พี่สาวอ่าน' }), h('span', { class: 'd', text: 'PDF (รวมไฟล์สแกน), Word, PowerPoint หรือรูปโจทย์ พี่สาวจะสรุป สอน ออกข้อสอบ และบอกเทคนิคให้' })])]);
     var fine = h('p', { class: 'fine', text: 'พี่สาว AI อาจผิดพลาดได้ เรื่องสำคัญให้ตรวจกับหนังสือเรียน สสวท. หรือ mytcas.com' });
     if (ui) return h('div', { class: 'empty' }, [
@@ -1200,28 +1269,23 @@
         h('h1', { text: ui.hello }),
         h('p', { class: 'lead', text: state.dueCount ? ui.lead + ' · วันนี้มีบัตรคำครบกำหนดทบทวน ' + state.dueCount + ' ใบ' : ui.lead })
       ]),
-      suggHead, list, uploadBtn, fine
+      resumeNode(cur), uploadBtn, fine
     ]);
-    var hr = new Date().getHours();
     var TILE_DESC = { math: 'สมการ กราฟ', physics: 'แรง พลังงาน', chem: 'สมการ ปริมาณสาร', bio: 'เซลล์ พันธุกรรม', python: 'โค้ด อัลกอริทึม', english: 'ไวยากรณ์ ศัพท์ อ่านเขียน', other: 'ปรึกษา ไอเดีย ระบาย' };
     var tiles = h('div', { class: 'tiles' }, SUBJECTS.filter(function (s) { return s.id !== 'all'; }).map(function (s) {
       return h('button', { class: 'tile', 'data-s': s.id, type: 'button', onclick: function () { setSubject(s.id); input.focus(); } }, [h('b', { text: s.label }), h('small', { text: TILE_DESC[s.id] || '' })]);
     }));
     return h('div', { class: 'empty' }, [
-      h('div', { class: 'hero' }, [
-        h('h1', { text: hr < 12 ? 'สวัสดีตอนเช้า' : hr < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น' }),
-        h('p', { class: 'lead', text: state.dueCount ? 'วันนี้มีบัตรคำครบกำหนดทบทวน ' + state.dueCount + ' ใบ' : 'ถามทฤษฎี ถ่ายรูปโจทย์ หรือส่งชีทมาให้พี่สาวช่วยติวได้เลย' }),
-        state.dueCount ? h('button', { class: 'cta', type: 'button', text: 'เริ่มทบทวนเลย', onclick: function () { showView('review'); } }) : null,
-        state.streak ? h('span', { class: 'streak', text: 'เรียนต่อเนื่อง ' + state.streak + ' วัน' }) : null
-      ]),
+      greetCard(),
+      adaptNote(),
+      moodNudge(),
+      resumeNode(cur),
       h('h2', { class: 'sec', text: 'วันนี้อยากเรียนอะไร' }),
       tiles,
-      h('button', { class: 'upload-cta', type: 'button', onclick: function () { fileInput.click(); } }, [h('span', { html: PAPERCLIP }), h('span', null, [h('span', { class: 't', text: 'ส่งไฟล์ให้พี่สาวอ่าน' }), h('span', { class: 'd', text: 'PDF (รวมไฟล์สแกน), Word, PowerPoint หรือรูปโจทย์ พี่สาวจะสรุป สอน ออกข้อสอบ และบอกเทคนิคให้' })])]),
-      suggHead, list,
-      h('p', { class: 'fine', text: 'พี่สาว AI อาจผิดพลาดได้ เรื่องสำคัญให้ตรวจกับหนังสือเรียน สสวท. หรือ mytcas.com' })
+      uploadBtn,
+      fine
     ]);
-  }
-  function renderAll() {
+  }  function renderAll() {
     thread.innerHTML = '';
     if (!state.session.messages.length) { thread.appendChild(renderEmpty()); chat.scrollTop = 0; return; }
     state.session.messages.forEach(function (m) { thread.appendChild(msgNode(m)); });
@@ -1537,22 +1601,24 @@
       var ok = isRight(qq, q.answers[i]);
       var sj = qq.subject || 'other';
       bySubj[sj] = bySubj[sj] || [0, 0]; bySubj[sj][1]++; if (ok) bySubj[sj][0]++;
+      if (!ok) noteError(qq, q.answers[i], sj);
       if (!ok) addLog({ type: 'quiz', topic: qq.topic, subject: sj, q: clip(qq.question, 300), chosen: answered(qq, q.answers[i]) ? (qq.type === 'numeric' ? str(q.answers[i]) : clip(qq.choices[q.answers[i]], 150)) : '(ไม่ได้ตอบ)', correct: qq.type === 'numeric' ? String(qq.numeric) : clip(qq.choices[qq.answer], 150) });
     });
-    DB.put('results', { id: m.qid, title: q.title, date: Date.now(), score: q.score, total: q.questions.length, bySubject: bySubj, topics: q.questions.map(function (qq, i) { return { topic: qq.topic, subject: qq.subject, ok: isRight(qq, q.answers[i]) }; }) }).catch(function () {});
+    DB.put('results', { id: m.qid, title: q.title, date: Date.now(), score: q.score, total: q.questions.length, bySubject: bySubj, topics: q.questions.map(function (qq, i) { return { topic: qq.topic, sub: qq.sub || '', subject: qq.subject, ok: isRight(qq, q.answers[i]) }; }) }).catch(function () {});
     bumpActivity('quizQ', q.questions.length); bumpActivity('quizOk', q.score);
     m.content = quizContent(m);
     renderQuiz(m._node, m);
     saveLog(); queueSave();
+    setTimeout(refreshMasteryCache, 900);
   }
   function normalizeQuiz(data, o) {
     var list = data && Array.isArray(data.questions) ? data.questions : [];
     var qs = list.map(function (q) {
       if (!q || typeof q.question !== 'string') return null;
-      var base = { question: fixLatex(q.question), explanation: fixLatex(q.explanation), trap: fixLatex(q.trap), technique: fixLatex(q.technique), topic: clip(q.topic, 80), subject: SUBJECT_LABEL[q.subject] ? q.subject : 'other', source: clip(q.source, 120) };
+      var base = { question: fixLatex(q.question), explanation: fixLatex(q.explanation), trap: fixLatex(q.trap), technique: fixLatex(q.technique), topic: clip(q.topic, 80), subject: SUBJECT_LABEL[q.subject] ? q.subject : 'other', source: clip(q.source, 120), sub: clip(q.subtopic, 80) };
       if (q.type === 'numeric' || (!Array.isArray(q.choices) || !q.choices.length) && typeof q.numeric_answer === 'number') {
         if (typeof q.numeric_answer !== 'number' || !isFinite(q.numeric_answer)) return null;
-        base.type = 'numeric'; base.numeric = q.numeric_answer; base.unit = clip(q.unit, 30);
+        base.type = 'numeric'; base.numeric = q.numeric_answer; base.unit = clip(q.unit, 30); base.commonErr = clip(fixLatex(q.common_error), 200); base.etype = validEt(str(q.error_type));
         return base;
       }
       if (!Array.isArray(q.choices) || q.choices.length < 2) return null;
@@ -1561,6 +1627,8 @@
       if (!Number.isInteger(ans) || ans < 0 || ans >= choices.length) return null;
       var order = shuffle(choices.map(function (_, i) { return i; }));
       base.type = 'mcq'; base.choices = order.map(function (i) { return choices[i]; }); base.answer = order.indexOf(ans);
+      var wy = Array.isArray(q.wrong_why) ? q.wrong_why : [], et = Array.isArray(q.error_types) ? q.error_types : [];
+      base.whys = order.map(function (i) { return clip(fixLatex(str(wy[i])), 200); }); base.etypes = order.map(function (i) { return validEt(str(et[i])); });
       return base;
     }).filter(Boolean);
     if (!qs.length) return null;
@@ -1605,6 +1673,7 @@
     await DB.put('cards', card).catch(function () {});
     bumpActivity('cards');
     if (grade === 0) addLog({ type: 'card', topic: card.topic, subject: card.subject, q: clip(card.front, 300) });
+    if (grade === 0) addError({ src: 'card', subject: card.subject, topic: card.topic, q: card.front, mine: '(ยังจำไม่ได้)', right: card.back, why: '', etype: 'recall' });
     else state.log = state.log.filter(function (x) { return !(x.type === 'card' && x.q === clip(card.front, 300)); });
     saveLog();
     refreshDue();
@@ -1634,8 +1703,8 @@
         renderDeck(node, m);
       }));
     } else {
-      wrap.appendChild(h('div', { class: 'md', html: renderMarkdown('บัตรคำชุดนี้ถูกเก็บในหน้า **ทบทวน** แล้ว พี่สาวจะนัดให้ทบทวนแต่ละใบตามจังหวะที่ช่วยให้จำได้นาน ใบที่ยังจำไม่ได้จะกลับมาเร็วกว่า') }));
-      wrap.appendChild(h('div', { class: 'grade' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ไปหน้าทบทวน', onclick: function () { showView('review'); } })]));
+      wrap.appendChild(h('div', { class: 'md', html: renderMarkdown('บัตรคำชุดนี้ถูกเก็บในเมนู **Flashcard** แล้ว พี่สาวจะนัดให้ทบทวนแต่ละใบตามจังหวะที่ช่วยให้จำได้นาน ใบที่ยังจำไม่ได้จะกลับมาเร็วกว่า') }));
+      wrap.appendChild(h('div', { class: 'grade' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ไปที่ Flashcard', onclick: function () { showView('flash'); } })]));
     }
     box.appendChild(wrap);
     typeset(wrap);
@@ -1805,7 +1874,7 @@
       } else {
         am.deck = await saveDeck(data, o);
         if (!am.deck) throw apiError('invalid_json');
-        am.content = '[พี่สาวทำบัตรคำ "' + am.deck.title + '" ' + am.deck.cards.length + ' ใบ และเก็บไว้ในหน้าทบทวนแล้ว]';
+        am.content = '[พี่สาวทำบัตรคำ "' + am.deck.title + '" ' + am.deck.cards.length + ' ใบ และเก็บไว้ในเมนู Flashcard แล้ว]';
       }
       if (acc.notes && acc.notes.length) am.notes = acc.notes;
     } catch (e) { fail(am, e); }
@@ -2060,24 +2129,23 @@
     b.appendChild(h('div', { class: 'band-t' }, [h('h2', { text: u.title }), h('p', { text: u.sub })]));
   }
   var DRAFTS = {};
-  // Choosing a subject opens that subject's own window: its latest chat (or a fresh one), colours, header and tools
+  // Choosing a subject opens that subject's start page: its colours, header, tools and 3 random starter questions.
+  // The latest chat of that subject is one tap away ("คุยต่อแชตล่าสุด"), and every chat stays in the left menu.
   async function setSubject(id) {
     var cur = state.subject();
     if (id === cur) { input.focus(); return; }
     if (state.busy) { showToast('รอพี่สาวตอบเสร็จก่อน แล้วค่อยเปลี่ยนวิชา'); return; }
     DRAFTS[cur] = input.value;
-    var items = await DB.all('sessions').catch(function () { return []; });
-    var mine = items.filter(function (it) { return (it.subject || 'all') === id && (it.messages || []).length; })
-      .sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); })[0];
-    S.subject = id; saveSettings(); rollStarters(id);
+    S.subject = id; saveSettings();
     state.pendingImages = []; renderThumbs(); state.quickPick = null; state.skillPick = null; renderSkillChip(); closeSlash();
-    if (mine) openSession(mine);
-    else { state.session = freshSession(); state.session.subject = id; renderSubjects(); renderMatChips(); updateTitle(); renderAll(); }
+    state.session = freshSession(); state.session.subject = id;
+    renderSubjects(); renderMatChips(); updateTitle(); renderAll(); renderHistoryList();
     renderQuickState();
     input.value = DRAFTS[id] || ''; autosize(); updateComposer();
     thread.classList.remove('subj-swap'); void thread.offsetWidth; thread.classList.add('subj-swap');
   }
-  function updateTitle() { $('session-title').textContent = state.session.title || 'บทเรียนใหม่'; }
+  var VIEW_TITLES = { library: 'ไฟล์', review: 'ทบทวน', notebook: 'สมุดข้อผิด', mastery: 'Mastery', kmap: 'Knowledge Map', flash: 'Flashcard', stats: 'ความก้าวหน้า', settings: 'ตั้งค่า', tools: 'เครื่องมือช่วยเรียน' };
+  function updateTitle() { $('session-title').textContent = state.view === 'chat' ? (state.session.title || 'บทเรียนใหม่') : (VIEW_TITLES[state.view] || ''); }
 
   // Attachments
   $('btn-attach').addEventListener('click', function () { fileInput.click(); });
@@ -2110,7 +2178,7 @@
       var f = files[i], kind = detectKind(f);
       if (kind === 'office-old') { showToast('ยังอ่าน ' + f.name + ' ไม่ได้ ให้บันทึกเป็น PDF, .docx หรือ .pptx ก่อน'); continue; }
       if (!kind) { showToast('ยังไม่รองรับไฟล์ ' + f.name); continue; }
-      if (kind === 'image' && state.view === 'chat') { addPendingImage(f); continue; }
+      if (kind === 'image' && (state.view === 'chat' || state.view === 'tools')) { addPendingImage(f); continue; }
       if (f.size > INLINE_MAX && kind === 'pdf') { showToast(f.name + ' ใหญ่เกิน 48 MB ลองแยกไฟล์ก่อน'); continue; }
       await addMaterial(f, kind);
     }
@@ -2148,7 +2216,7 @@
   async function addMaterial(file, kind) {
     var m = { id: newId('m'), name: file.name, kind: kind, mime: file.type || (kind === 'pdf' ? 'application/pdf' : 'text/plain'), size: file.size, created: Date.now(), status: 'reading' };
     state.materials.unshift(m);
-    if (state.view === 'chat') { activateMaterial(m.id); pushMaterialCard(m); }
+    if (state.view === 'chat' || state.view === 'tools') { activateMaterial(m.id); pushMaterialCard(m); }
     try {
       if (kind === 'pdf') m.blob = file;
       else if (kind === 'image') { var small = await compressImage(file, 2400, 0.88); m.blob = small; m.mime = 'image/jpeg'; m.size = small.size; }
@@ -2184,6 +2252,7 @@
   function refreshMaterialViews(m) {
     state.session.messages.forEach(function (msg) { if (msg.kind === 'material' && msg.materialId === m.id && msg._node) renderMaterialCard(msg._node, msg); });
     renderMatChips();
+    if (state.view === 'tools') renderToolsDrawer();
   }
   function scopeLabel(m) {
     var sc = state.session.matScope && state.session.matScope[m.id];
@@ -2248,15 +2317,49 @@
   // ---------- views ----------
   function showView(v) {
     state.view = v;
+    updateTitle(); if (narrowMQ.matches) setSide(false);
+    if (v === 'review') markAdaptSeen();
+    if (v === 'notebook' || v === 'mastery' || v === 'kmap' || v === 'flash') markNew(v);
     document.querySelectorAll('.view').forEach(function (el) { el.hidden = el.id !== 'view-' + v; });
     document.querySelectorAll('.nav-btn').forEach(function (b) { if (b.dataset.view === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     if (v === 'library') renderLibrary();
     if (v === 'review') renderReview();
+    if (v === 'notebook') renderNotebook();
+    if (v === 'mastery') renderMastery();
+    if (v === 'kmap') renderKmap();
+    if (v === 'flash') renderFlash();
     if (v === 'stats') renderStats();
     if (v === 'settings') renderSettings();
     if (v === 'chat') { stick(); }
   }
   document.querySelectorAll('.nav-btn').forEach(function (b) { b.addEventListener('click', function () { if (reviewSession) reviewSession = null; showView(b.dataset.view); }); });
+
+  // ---------- left menu: slides in on phones (swipe from the left edge works too), stays open on desktop (the menu button folds it) ----------
+  var narrowMQ = window.matchMedia('(max-width: 899px)');
+  function sideOpen() { return narrowMQ.matches ? $('shell').getAttribute('data-side') === 'open' : !document.body.classList.contains('side-hidden'); }
+  function setSide(open) {
+    if (narrowMQ.matches) $('shell').setAttribute('data-side', open ? 'open' : 'closed');
+    else { document.body.classList.toggle('side-hidden', !open); try { localStorage.setItem('us-side', open ? '1' : '0'); } catch (e) {} }
+    $('btn-menu').setAttribute('aria-expanded', open ? 'true' : 'false');
+    $('btn-menu').setAttribute('aria-label', open ? 'ปิดเมนู' : 'เปิดเมนู');
+  }
+  $('btn-menu').addEventListener('click', function () { setSide(!sideOpen()); });
+  $('side-dim').addEventListener('click', function () { setSide(false); });
+  (function initSide() {
+    try { if (!narrowMQ.matches && localStorage.getItem('us-side') === '0') document.body.classList.add('side-hidden'); } catch (e) {}
+    $('btn-menu').setAttribute('aria-expanded', sideOpen() ? 'true' : 'false');
+    var onChange = function () { $('shell').setAttribute('data-side', 'closed'); $('btn-menu').setAttribute('aria-expanded', sideOpen() ? 'true' : 'false'); };
+    if (narrowMQ.addEventListener) narrowMQ.addEventListener('change', onChange); else if (narrowMQ.addListener) narrowMQ.addListener(onChange);
+    var sx = 0, sy = 0, tracking = false;
+    document.addEventListener('touchstart', function (e) { if (!narrowMQ.matches || e.touches.length !== 1) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true; }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (!tracking) return; tracking = false;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      if (dx > 0 && sx < 28 && !sideOpen()) setSide(true);
+      else if (dx < 0 && sideOpen()) setSide(false);
+    }, { passive: true });
+  })();
 
   // Library
   $('btn-lib-upload').addEventListener('click', function () { fileInput.click(); });
@@ -2305,9 +2408,22 @@
     return out;
   }
   function byExamDate(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }
+  function normAdapt(a) {
+    if (!a || typeof a !== 'object' || !parseDay(a.day)) return null;
+    var cl = function (s, n) { return clip(str(s), n); };
+    return {
+      id: cl(a.id, 30), day: str(a.day), ts: +a.ts || 0, kind: cl(a.kind, 8), msg: cl(a.msg, 220), undone: !!a.undone, seen: !!a.seen,
+      why: (Array.isArray(a.why) ? a.why : []).slice(0, 8).map(function (x) { return cl(x, 180); }),
+      rows: (Array.isArray(a.rows) ? a.rows : []).slice(0, 14).map(function (r) { return [cl(r && r[0], 70), cl(r && r[1], 80), cl(r && r[2], 2)]; }),
+      added: (Array.isArray(a.added) ? a.added : []).slice(0, 20).map(function (x) { return cl(x, 40); }),
+      mod: (Array.isArray(a.mod) ? a.mod : []).slice(0, 20).filter(function (m) { return m && m.prev && typeof m.prev === 'object'; }).map(function (m) {
+        var p = m.prev; return { id: cl(m.id, 40), prev: { date: str(p.date), start: str(p.start), min: +p.min || 45, miss: !!p.miss, noAdapt: !!p.noAdapt, adj: p.adj && typeof p.adj === 'object' ? { k: cl(p.adj.k, 12), old: +p.adj.old || 0 } : null } };
+      })
+    };
+  }
   function normPlanner(v) {
     var p = v && typeof v === 'object' ? v : {};
-    var tasks = (Array.isArray(p.tasks) ? p.tasks : []).map(function (t) { var n = normTask(t); if (n && t.id) { n.id = str(t.id); n.done = !!t.done; n.exam = str(t.exam); } if (n) delete n.examName; return n; }).filter(Boolean);
+    var tasks = (Array.isArray(p.tasks) ? p.tasks : []).map(function (t) { var n = normTask(t); if (n && t.id) { n.id = str(t.id); n.done = !!t.done; n.exam = str(t.exam); } if (n) { delete n.examName; if (t.miss) n.miss = true; if (t.noAdapt) n.noAdapt = true; if (t.adj && typeof t.adj === 'object') n.adj = { k: str(t.adj.k).slice(0, 12), old: Math.max(0, Math.min(300, Math.round(+t.adj.old) || 0)) }; } return n; }).filter(Boolean);
     var seen = {};
     // older versions stored a single `exam`; it becomes the first item of `exams`
     var exams = (Array.isArray(p.exams) ? p.exams : (p.exam ? [p.exam] : [])).map(normExam).filter(function (e) {
@@ -2317,7 +2433,7 @@
     tasks.forEach(function (t) { if (t.exam && !exams.some(function (e) { return e.id === t.exam; })) t.exam = ''; });
     var chat = (Array.isArray(p.chat) ? p.chat : []).filter(function (m) { return m && (m.role === 'user' || m.role === 'assistant') && str(m.content).trim(); })
       .slice(-40).map(function (m) { return { role: m.role, content: str(m.content), ts: m.ts || 0, plan: m.plan || (m.role === 'assistant' ? extractPlan(m.content) : null), applied: !!m.applied }; });
-    return { exams: exams, tasks: tasks, chat: chat };
+    return { exams: exams, tasks: tasks, chat: chat, adapt: normAdapt(p.adapt), pullDay: str(p.pullDay).slice(0, 10) };
   }
   function savePlanner() { kvSet('planner', normPlanner(state.planner)); }
   // exams that passed more than EXAM_KEEP_DAYS days ago are removed automatically
@@ -2355,12 +2471,12 @@
     return '';
   }
   function planBlock(t, el, loose, timed, key) {
-    var chk = h('button', { class: 'pl-chk', type: 'button', 'aria-pressed': t.done ? 'true' : 'false', 'aria-label': (t.done ? 'ยกเลิกทำแล้ว: ' : 'ทำแล้ว: ') + t.title, onclick: function () { t.done = !t.done; savePlanner(); renderPlanner(el); } });
-    var sub = (SUBJECT_LABEL[t.subject] || '') + ' · ' + (t.start ? t.start + '–' + endTime(t) + ' · ' : '') + t.min + ' นาที';
+    var chk = h('button', { class: 'pl-chk', type: 'button', 'aria-pressed': t.done ? 'true' : 'false', 'aria-label': (t.done ? 'ยกเลิกทำแล้ว: ' : 'ทำแล้ว: ') + t.title, onclick: function () { t.done = !t.done; savePlanner(); if (!(t.done && runAdapt())) renderPlanner(el); } });
+    var sub = (SUBJECT_LABEL[t.subject] || '') + ' · ' + (t.start ? t.start + '–' + endTime(t) + ' · ' : '') + (t.adj && t.adj.k === 'trim' && t.adj.old ? t.adj.old + '→' + t.min : t.min) + ' นาที';
     var ex = examById(t.exam), clash = timeClash(t, timed || []);
-    var title = h('span', { class: 't', text: t.title }, ex ? [h('span', { class: 'pl-tag', text: 'เพื่อ ' + ex.name })] : []);
+    var title = h('span', { class: 't', text: t.title }, [ex ? h('span', { class: 'pl-tag', text: 'เพื่อ ' + ex.name }) : null, t.miss ? h('span', { class: 'pl-tag ad s', text: 'ไม่ได้ทำ' }) : (t.adj ? h('span', { class: 'pl-tag ad', text: ADJ_LABEL[t.adj.k] || '' }) : null)]);
     var tx = h('button', { class: 'pl-tx', type: 'button', 'aria-label': 'แก้ ' + t.title, onclick: function () { openTaskEdit(el, t, key); } }, [title, h('small', { text: sub }), clash ? h('small', { class: 'pl-warn', text: '⚠ เวลาซ้อนกับ ' + clash }) : null]);
-    return h('div', { class: 'pl-blk' + (loose ? ' loose' : '') + (t.done ? ' done' : ''), 'data-s': t.subject }, [chk, tx]);
+    return h('div', { class: 'pl-blk' + (loose ? ' loose' : '') + (t.done ? ' done' : '') + (t.miss ? ' miss' : ''), 'data-s': t.subject }, [chk, tx]);
   }
 
   // ---- add / edit an exam (new exams can also get today's schedule in the same step) ----
@@ -2484,6 +2600,229 @@
     return form;
   }
 
+  // ---------- adaptive planner ----------
+  // When real life does not follow the plan, the next days are re-planned locally by simple rules (no tokens).
+  // Rules: a timed task counts as missed 1 h after it should have ended (or if it was left unticked yesterday); at most 30 min is made up today,
+  // the rest moves to the next free day (a day never goes over 3 h 30 min), the rest of today is trimmed by 25%, a short flashcard review is added on day 3.
+  var ADAPT_CAP = 210, ADAPT_GRACE = 60, ADAPT_BUF = 15;
+  var ADJ_LABEL = { catch: 'ชดเชย', moved: 'ย้ายมาจากวันอื่น', review: 'ทบทวนบัตรคำ', pulled: 'ดึงมาจากพรุ่งนี้', trim: 'ลดเวลา' };
+  function r15(m) { return Math.max(15, Math.round(m / 15) * 15); }
+  function dayKeyPlus(n) { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return dayKey(d); }
+  function dayWord(key) { var n = daysUntil(key); return n === 0 ? 'วันนี้' : n === 1 ? 'พรุ่งนี้' : n === 2 ? 'มะรืนนี้' : n === 3 ? 'อีก 3 วัน' : fmtDay(parseDay(key)); }
+  function liveTasks(key) { return state.planner.tasks.filter(function (t) { return t.date === key && !t.miss; }); }
+  function dayLoad(key) { return liveTasks(key).reduce(function (s, t) { return s + t.min; }, 0); }
+  function byStart(a, b) { var x = a.start || '99:99', y = b.start || '99:99'; return x < y ? -1 : x > y ? 1 : 0; }
+  function findSlot(key, m, from) {
+    var tt = liveTasks(key).filter(function (t) { return t.start; });
+    for (var s = Math.ceil(from / 15) * 15; s <= 1260; s += 15) {
+      var e = s + m;
+      if (tt.every(function (t) { var a = toMin(t.start); return e + ADAPT_BUF <= a || s >= a + t.min + ADAPT_BUF; })) return s;
+    }
+    return null;
+  }
+  function mkAdaptTask(src, key, start, min, k) {
+    var t = normTask({ date: key, title: src.title, start: toHHMM(start), min: min, subject: src.subject });
+    if (!t) return null;
+    t.exam = src.exam || ''; t.adj = { k: k, old: 0 };
+    return t;
+  }
+  function adaptTitle(t) { return clip(t.title, 26); }
+  function adaptActive() { var a = state.planner.adapt; return a && a.day === dayKey() && !a.undone ? a : null; }
+  function markAdaptSeen() { var a = state.planner.adapt; if (a && !a.seen && a.day === dayKey()) { a.seen = true; savePlanner(); updateAdaptDot(); } }
+  function updateAdaptDot() { var d = $('menu-dot'), a = adaptActive(); if (d) d.hidden = !(a && !a.seen); }
+  function adaptRecord(kind) { return { id: newId('a'), day: dayKey(), ts: Date.now(), kind: kind, msg: '', why: [], rows: [], added: [], mod: [], undone: false, seen: false }; }
+  function adaptSnap(rec, t) {
+    if (rec.mod.some(function (m) { return m.id === t.id; })) return;
+    rec.mod.push({ id: t.id, prev: { date: t.date, start: t.start, min: t.min, miss: !!t.miss, noAdapt: !!t.noAdapt, adj: t.adj ? { k: t.adj.k, old: t.adj.old } : null } });
+  }
+  function adaptRows(rec, before) {
+    var P = state.planner;
+    before.forEach(function (b) {
+      var t = P.tasks.filter(function (x) { return x.id === b.id; })[0]; if (!t) return;
+      var nm = adaptTitle(t);
+      if (t.miss) {
+        var cu = P.tasks.filter(function (x) { return rec.added.indexOf(x.id) >= 0 && x.adj && x.adj.k === 'catch' && x.title === t.title; })[0];
+        rec.rows.push([b.o, cu ? nm + ' ' + cu.min + 'm (ชดเชย ' + cu.start + ')' : 'ย้ายไปวันถัดไป', 'c']);
+      } else if (t.min !== b.m) rec.rows.push([b.o, nm + ' ' + t.min + 'm', 'c']);
+      else rec.rows.push([b.o, b.o, 's']);
+    });
+    rec.added.forEach(function (id) {
+      var t = P.tasks.filter(function (x) { return x.id === id; })[0];
+      if (t && t.adj && t.adj.k !== 'catch') rec.rows.push(['', '+ ' + adaptTitle(t) + ' ' + t.min + 'm ' + dayWord(t.date) + (t.start ? ' ' + t.start : ''), 'a']);
+    });
+  }
+  function adaptDone(rec, before) {
+    var P0 = state.planner;
+    var extra = rec.mod.filter(function (m) { return !before.some(function (b) { return b.id === m.id; }); }).map(function (m) { return P0.tasks.filter(function (x) { return x.id === m.id; })[0]; }).filter(function (t) { return t && t.miss; }).map(function (t) { return { id: t.id, m: t.min, o: (t.date !== dayKey() ? 'เมื่อวาน ' : '') + adaptTitle(t) + ' ' + t.min + 'm' }; });
+    adaptRows(rec, extra.concat(before));
+    state.planner.adapt = rec; savePlanner(); adaptUi(true);
+    return true;
+  }
+  function runAdapt() {
+    var P = state.planner, now = new Date(), nowM = now.getHours() * 60 + now.getMinutes(), today = dayKey(), yday = dayKeyPlus(-1);
+    var missed = P.tasks.filter(function (t) {
+      if (t.done || t.miss || t.noAdapt || !t.start) return false;
+      if (t.date === today) return toMin(t.start) + t.min + ADAPT_GRACE <= nowM;
+      return t.date === yday;
+    }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : byStart(a, b); });
+    var before = liveTasks(today).filter(function (t) { return t.start; }).sort(byStart).map(function (t) { return { id: t.id, m: t.min, o: adaptTitle(t) + ' ' + t.min + 'm' }; });
+    var rec, add = function (t) { if (t) { P.tasks.push(t); rec.added.push(t.id); } return t; };
+    if (missed.length) {
+      rec = adaptRecord('miss');
+      missed.forEach(function (ms) {
+        var nm = adaptTitle(ms);
+        adaptSnap(rec, ms); ms.miss = true;
+        var later = liveTasks(today).filter(function (t) { return !t.done && t.start && toMin(t.start) > nowM && !t.adj; }).sort(byStart)[0];
+        if (later) {
+          var cut = Math.min(later.min - 15, r15(later.min * 0.25));
+          if (cut > 0) { adaptSnap(rec, later); var was = later.min; later.min -= cut; later.adj = { k: 'trim', old: was }; rec.why.push('ลด ' + adaptTitle(later) + ' ลง ' + cut + ' นาที ไม่ให้วันนี้แน่นเกินและมีเวลาพักก่อนชดเชย'); }
+        }
+        var lastEnd = liveTasks(today).filter(function (t) { return t.start; }).reduce(function (a, t) { return Math.max(a, toMin(t.start) + t.min); }, 0);
+        var cm = Math.min(30, ms.min), sl = findSlot(today, cm, Math.max(nowM + ADAPT_BUF, lastEnd + ADAPT_BUF)), okC = false;
+        if (sl !== null && sl + cm <= 1320 && add(mkAdaptTask(ms, today, sl, cm, 'catch'))) { okC = true; rec.why.push('ชดเชย ' + nm + ' วันนี้ ' + cm + ' นาที เวลา ' + toHHMM(sl)); }
+        var carry = okC ? ms.min - cm : ms.min, placed = carry <= 0;
+        for (var i = 1; i <= 3 && !placed; i++) {
+          var key = dayKeyPlus(i);
+          if (dayLoad(key) + carry <= ADAPT_CAP) { var s = findSlot(key, carry, 540); if (s !== null && add(mkAdaptTask(ms, key, s, carry, 'moved'))) { rec.why.push('ย้ายส่วนที่เหลือ ' + carry + ' นาทีไป' + dayWord(key) + ' (วันนั้นยังไม่เกิน 3 ชม. 30 นาที)'); placed = true; } }
+        }
+        if (!placed) rec.why.push('ช่วง 3 วันข้างหน้าแน่นแล้ว ยังย้ายส่วนที่เหลือของ ' + nm + ' ไม่ได้ ลองกด "ให้พี่สาวช่วยวางแผน"');
+        if (ms.subject !== 'other') {
+          var k3 = dayKeyPlus(3), dup = P.tasks.some(function (x) { return x.date === k3 && x.adj && x.adj.k === 'review' && x.subject === ms.subject; });
+          var s3 = dup ? null : findSlot(k3, 15, 1140);
+          if (s3 !== null && add(mkAdaptTask({ title: 'ทบทวนบัตรคำ: ' + (SUBJECT_LABEL[ms.subject] || ''), subject: ms.subject, exam: ms.exam }, k3, s3, 15, 'review'))) rec.why.push('เพิ่มบัตรคำ' + (SUBJECT_LABEL[ms.subject] || '') + ' 15 นาทีในวันที่ 3 เพื่อให้จำได้ติด');
+        }
+      });
+      var names = missed.map(adaptTitle), yOnly = missed.every(function (t) { return t.date === yday; });
+      rec.msg = (yOnly ? 'เมื่อวาน ' : 'วันนี้ ') + (names.length > 2 ? names.slice(0, 2).join(' และ ') + ' กับอีก ' + (names.length - 2) + ' รายการ' : names.join(' และ ')) + ' ยังไม่ได้ทำ พี่ปรับแผน 3 วันข้างหน้าให้ใหม่แล้ว';
+      return adaptDone(rec, before);
+    }
+    // finished everything early: pull a little of tomorrow's work forward
+    var todayAll = planTasksFor(today).filter(function (t) { return !t.miss; });
+    if (todayAll.length && todayAll.every(function (t) { return t.done; }) && nowM < 1020 && P.pullDay !== today) {
+      var nx = liveTasks(dayKeyPlus(1)).filter(function (t) { return t.start && !t.done && !t.adj && t.min >= 45; }).sort(byStart)[0];
+      if (nx) {
+        var pull = Math.min(30, nx.min - 15);
+        var lastE = liveTasks(today).filter(function (t) { return t.start; }).reduce(function (a, t) { return Math.max(a, toMin(t.start) + t.min); }, 0);
+        var sl2 = findSlot(today, pull, Math.max(nowM + ADAPT_BUF, lastE + ADAPT_BUF));
+        if (sl2 !== null && sl2 + pull <= 1320) {
+          rec = adaptRecord('pull');
+          adaptSnap(rec, nx); var w0 = nx.min; nx.min -= pull; nx.adj = { k: 'trim', old: w0 };
+          add(mkAdaptTask(nx, today, sl2, pull, 'pulled'));
+          rec.why.push('ทำครบก่อนเวลา ดึก ' + adaptTitle(nx) + ' ของพรุ่งนี้มาทำก่อน ' + pull + ' นาที พรุ่งนี้จะเบาลง');
+          rec.msg = 'วันนี้ทำครบเร็วกว่าแผน เก่งมาก พี่ดึก ' + adaptTitle(nx) + ' ของพรุ่งนี้มาให้ทำก่อน ' + pull + ' นาที';
+          P.pullDay = today;
+          rec.rows.push([adaptTitle(nx) + ' ' + w0 + 'm (พรุ่งนี้)', adaptTitle(nx) + ' ' + nx.min + 'm', 'c']);
+          rec.rows.push(['', '+ ' + adaptTitle(nx) + ' ' + pull + 'm วันนี้ ' + toHHMM(sl2), 'a']);
+          P.adapt = rec; savePlanner(); adaptUi(true);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  // "not free all day": split what is left of today between tomorrow and the day after
+  function adaptBusy() {
+    var P = state.planner, today = dayKey(), left = P.tasks.filter(function (t) { return t.date === today && !t.done && !t.miss; });
+    if (!left.length) { showToast('วันนี้ไม่มีงานที่เหลือให้ย้าย'); return; }
+    var rec = adaptRecord('busy');
+    left.forEach(function (ms) {
+      adaptSnap(rec, ms); ms.miss = true;
+      var m1 = Math.min(ms.min, Math.ceil(ms.min / 2 / 15) * 15), m2 = ms.min - m1, from = ms.start ? toMin(ms.start) : 540;
+      [[1, m1], [2, m2]].forEach(function (p) {
+        if (p[1] < 10) return;
+        var key = dayKeyPlus(p[0]), s = findSlot(key, p[1], from);
+        if (s !== null) { var t = mkAdaptTask(ms, key, s, p[1], 'moved'); if (t) { P.tasks.push(t); rec.added.push(t.id); } }
+        else rec.why.push('หาเวลาว่างให้ ' + adaptTitle(ms) + ' ' + p[1] + ' นาที ใน' + dayWord(key) + ' ไม่ได้');
+      });
+      rec.rows.push([adaptTitle(ms) + ' ' + ms.min + 'm', 'ย้ายไปพรุ่งนี้/มะรืนนี้', 'c']);
+    });
+    rec.why.unshift('งานที่เหลือของวันนี้ถูกแบ่งครึ่งต่อครึ่งไปอีก 2 วัน จะได้ไม่แน่นวันเดียว');
+    rec.msg = 'วันนี้ไม่ว่างทั้งวัน พี่กระจาย ' + left.length + ' รายการที่เหลือไปพรุ่งนี้กับมะรืนนี้ให้แล้ว';
+    P.adapt = rec; savePlanner(); adaptUi(false);
+  }
+  function undoAdapt() {
+    var P = state.planner, a = P.adapt; if (!a || a.undone) return;
+    P.tasks = P.tasks.filter(function (t) { return a.added.indexOf(t.id) < 0; });
+    a.mod.forEach(function (m) {
+      var t = P.tasks.filter(function (x) { return x.id === m.id; })[0]; if (!t) return;
+      t.date = m.prev.date; t.start = m.prev.start; t.min = m.prev.min; t.miss = m.prev.miss;
+      if (m.prev.adj) t.adj = m.prev.adj; else delete t.adj;
+      if (m.prev.noAdapt) t.noAdapt = true; else if (!t.done) t.noAdapt = true; // do not re-plan what was just put back
+    });
+    a.undone = true; savePlanner(); adaptUi(false);
+  }
+  function redoAdapt() {
+    var P = state.planner, a = P.adapt; if (!a) return;
+    a.mod.forEach(function (m) { var t = P.tasks.filter(function (x) { return x.id === m.id; })[0]; if (t) delete t.noAdapt; });
+    if (a.kind === 'pull') P.pullDay = '';
+    P.adapt = null;
+    if (!runAdapt()) { showToast('ตอนนี้ไม่มีอะไรต้องปรับแล้ว'); savePlanner(); adaptUi(false); }
+  }
+  function adaptUi(fresh) {
+    try {
+      updateAdaptDot();
+      var a = state.planner.adapt;
+      if (state.view === 'review' && !reviewSession && !planExamForm && !planTaskEdit) { markAdaptSeen(); renderReview(); }
+      else if (state.view === 'chat' && !state.session.messages.length && !state.busy) renderAll();
+      if (fresh && a && state.view !== 'review') showToast(a.msg, 'ดูแผน', function () { showView('review'); });
+    } catch (e) {}
+  }
+  function startAdaptTimer() {
+    setInterval(function () { if (!document.hidden) runAdapt(); }, 300000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) runAdapt(); });
+    runAdapt();
+  }
+  function adaptDiffNode(a) {
+    var rows = (a.rows || []);
+    var box = h('div', { class: 'ad-diff' }, [h('div', { class: 'h', text: 'เดิม' }), h('div', { class: 'h n', text: 'ใหม่' })]);
+    rows.forEach(function (r) { box.appendChild(h('div', { class: r[2] === 'c' && /^ย้าย/.test(r[1]) ? 'g' : '', text: r[0] })); box.appendChild(h('div', { class: 'n' + (r[2] === 's' ? '' : ' c'), text: r[1] })); });
+    return box;
+  }
+  function adaptActions(a, withAi) {
+    var kids = [a.undone
+      ? h('button', { class: 'textbtn strong', type: 'button', text: 'ใช้แผนที่พี่ปรับให้', onclick: redoAdapt })
+      : h('button', { class: 'textbtn', type: 'button', text: 'ย้อนกลับไปแผนเดิม', onclick: undoAdapt })];
+    if (withAi && !a.undone) kids.push(h('button', { class: 'textbtn', type: 'button', text: 'ให้พี่สาวปรับละเอียด (ใช้ AI)', onclick: function () { goPlanChat('ช่วยปรับแผน 3 วันข้างหน้าให้ละเอียดขึ้น ตามวันสอบและจุดอ่อนของหนูหน่อย '); } }));
+    return h('div', { class: 'row' }, kids);
+  }
+  function adaptChips(a) {
+    var c = (a.rows || []).filter(function (r) { return r[2] === 'c'; }).length, p = (a.rows || []).filter(function (r) { return r[2] === 'a'; }).length;
+    return h('div', { class: 'ad-chips' }, [c ? h('span', { text: 'ลดเวลา/ย้าย ' + c + ' รายการ' }) : null, p ? h('span', { text: '+ เพิ่ม ' + p + ' รายการ' }) : null]);
+  }
+  // compact card in the planner column (phones: tap to see old/new; desktop: the full card is in the right column)
+  function adaptBanner() {
+    var a = state.planner.adapt; if (!a || a.day !== dayKey()) return null;
+    if (a.undone) return h('div', { class: 'ad-card' }, [h('h3', { text: '↩︎ กำลังใช้แผนเดิม' }), adaptActions(a, false)]);
+    return h('div', { class: 'ad-card' }, [
+      h('h3', { text: '🧭 ' + a.msg }), adaptChips(a),
+      h('details', { class: 'ad-narrow' }, [h('summary', { text: 'ดูว่าเปลี่ยนอะไร (เดิม/ใหม่)' }), adaptDiffNode(a), h('ul', { class: 'ad-why' }, (a.why || []).map(function (w) { return h('li', { text: w }); }))]),
+      adaptActions(a, false)
+    ]);
+  }
+  function adaptCard() {
+    var a = state.planner.adapt; if (!a || a.day !== dayKey() || a.undone) return null;
+    return h('div', { class: 'ad-wide card-like' }, [h('b', { text: '🧭 การปรับแผนล่าสุด' }), h('div', { class: 'muted', text: 'เดิม เทียบกับ ใหม่ (วันนี้)' }), adaptDiffNode(a), h('ul', { class: 'ad-why' }, (a.why || []).map(function (w) { return h('li', { text: w }); })), adaptActions(a, true)]);
+  }
+  function adaptNote() {
+    var a = adaptActive(); if (!a) return null;
+    return h('button', { class: 'ad-note', type: 'button', onclick: function () { showView('review'); } }, [h('span', { text: '🧭', 'aria-hidden': 'true' }), h('span', null, [h('b', { text: a.msg }), h('small', { text: 'แตะเพื่อดูว่าเปลี่ยนอะไรบ้าง' })])]);
+  }
+  function nextDaysNode() {
+    var wrap = h('div', { class: 'pl-next' }), any = false;
+    wrap.appendChild(h('div', { class: 'pl-h2 sm' }, [h('span', { text: '3 วันข้างหน้า' }), h('span', { text: adaptActive() ? 'ปรับแล้ว' : '' })]));
+    for (var i = 1; i <= 3; i++) {
+      var key = dayKeyPlus(i), list = planTasksFor(key).filter(function (t) { return !t.miss; });
+      if (!list.length) continue;
+      any = true;
+      var tot = list.reduce(function (s, t) { return s + t.min; }, 0);
+      var det = h('details', { class: 'pl-nx', open: i === 1 }, [h('summary', null, [dayWord(key), h('small', { text: ' ' + fmtHours(tot) })])]);
+      list.forEach(function (t) {
+        det.appendChild(h('div', { class: 'ln', 'data-s': t.subject }, [h('i', { 'aria-hidden': 'true' }), h('time', { text: t.start || '' }), h('span', { text: t.title + ' · ' + (t.adj && t.adj.k === 'trim' && t.adj.old ? t.adj.old + '→' + t.min : t.min) + ' นาที' }, t.adj ? [h('span', { class: 'pl-tag ad', text: ADJ_LABEL[t.adj.k] || '' })] : [])]));
+      });
+      wrap.appendChild(det);
+    }
+    return any ? wrap : null;
+  }
   function renderPlanner(el) {
     var P = state.planner;
     var gone = sweepExams();
@@ -2492,8 +2831,9 @@
     var key = dayKey(day), isToday = key === dayKey();
     var list = planTasksFor(key);
     var timed = list.filter(function (t) { return t.start; }), loose = list.filter(function (t) { return !t.start; });
-    var done = list.filter(function (t) { return t.done; }).length;
-    var total = list.reduce(function (s, t) { return s + t.min; }, 0);
+    var live = list.filter(function (t) { return !t.miss; });
+    var done = live.filter(function (t) { return t.done; }).length;
+    var total = live.reduce(function (s, t) { return s + t.min; }, 0);
     var go = function (n) { planDay = new Date(day.getFullYear(), day.getMonth(), day.getDate() + n); planTaskEdit = null; planErr = ''; renderPlanner(el); };
     el.innerHTML = '';
     el.appendChild(h('div', { class: 'pl-top' }, [
@@ -2551,8 +2891,10 @@
     }
     if (past.length) el.appendChild(h('details', { class: 'pl-past', open: true }, [h('summary', { text: 'ผ่านไปแล้ว (' + past.length + ') · ลบให้เองหลังผ่านไป ' + EXAM_KEEP_DAYS + ' วัน' }), h('div', { class: 'pl-exams' }, past.map(function (e) { return examRow(e, true); }))]));
 
+    // ----- what the app changed on its own (adaptive planner) -----
+    var adb = adaptBanner(); if (adb) el.appendChild(adb);
     // ----- schedule of the day -----
-    el.appendChild(h('div', { class: 'pl-h2' }, [h('span', { text: isToday ? 'ตารางวันนี้' : 'ตารางวัน' }), h('span', { text: list.length ? 'ทำแล้ว ' + done + '/' + list.length + ' · ' + fmtHours(total) : '' })]));
+    el.appendChild(h('div', { class: 'pl-h2' }, [h('span', { text: isToday ? 'ตารางวันนี้' : 'ตารางวัน' }), h('span', { text: live.length ? 'ทำแล้ว ' + done + '/' + live.length + ' · ' + fmtHours(total) : '' })]));
     if (!list.length && !planTaskEdit) el.appendChild(h('p', { class: 'muted', text: 'ยังไม่มีรายการ เพิ่มเองด้านล่าง หรือให้พี่สาวช่วยจัดให้' }));
     if (planTaskEdit && !planTaskEdit.id) el.appendChild(taskEditorNode(el, key));
     if (timed.length) {
@@ -2566,9 +2908,11 @@
       loose.forEach(function (t) { lt.appendChild(planTaskEdit && planTaskEdit.id === t.id ? taskEditorNode(el, key) : planBlock(t, el, true, timed, key)); });
       el.appendChild(lt);
     }
+    if (isToday) { var nd = nextDaysNode(); if (nd) el.appendChild(nd); }
     el.appendChild(h('div', { class: 'pl-acts' }, [
       h('button', { class: 'textbtn strong', type: 'button', text: 'ให้พี่สาวช่วยวางแผน', onclick: function () { planTab = 'chat'; renderReview(); } }),
-      h('button', { class: 'textbtn', type: 'button', text: '+ เพิ่มเอง', onclick: function () { openTaskEdit(el, null, key); } })
+      h('button', { class: 'textbtn', type: 'button', text: '+ เพิ่มเอง', onclick: function () { openTaskEdit(el, null, key); } }),
+      isToday && live.some(function (t) { return !t.done; }) ? h('button', { class: 'textbtn', type: 'button', text: 'วันนี้ไม่ว่างทั้งวัน', onclick: adaptBusy }) : null
     ]));
     if (list.length) el.appendChild(h('p', { class: 'muted', text: 'แตะชื่องานเพื่อแก้เวลา ชื่อ วิชา หรือลบ · แตะวงกลมเพื่อติ๊กว่าทำแล้ว' }));
   }
@@ -2603,12 +2947,13 @@
       '- Do not add the plan block when you are only chatting or asking questions. Never invent official exam dates: ' + (searchUsable() ? 'use Google Search for official dates and mention the source.' : 'tell me to check mytcas.com.'),
       '', '## Current planner data',
       P.exams.length ? '- Exams (nearest first):\n' + P.exams.slice().sort(byExamDate).map(function (e) { var n = daysUntil(e.date); return '  ' + e.name + ' on ' + e.date + (n >= 0 ? ' (' + n + ' days from today)' : ' (already passed ' + (-n) + ' days ago)'); }).join('\n') : '- Exam date: not set yet',
-      upcoming.length ? '- Scheduled in the next 14 days:\n' + upcoming.map(function (t) { var ex = examById(t.exam); return '  ' + t.date + ' ' + (t.start || '--:--') + ' ' + t.min + 'm [' + t.subject + '] ' + t.title + (ex ? ' (for ' + ex.name + ')' : '') + (t.done ? ' (done)' : ''); }).join('\n') : '- Nothing scheduled yet.',
+      upcoming.length ? '- Scheduled in the next 14 days:\n' + upcoming.map(function (t) { var ex = examById(t.exam); return '  ' + t.date + ' ' + (t.start || '--:--') + ' ' + t.min + 'm [' + t.subject + '] ' + t.title + (ex ? ' (for ' + ex.name + ')' : '') + (t.done ? ' (done)' : '') + (t.miss ? ' (missed, already re-planned)' : ''); }).join('\n') : '- Nothing scheduled yet.',
       '- Flashcards due now: ' + state.dueCount,
       state.materials.length ? '- Files I keep in the app: ' + state.materials.slice(0, 8).map(function (m) { return m.name; }).join(', ') : '',
       '', '## My learning_profile', clip((state.profile.text || '').trim(), 2500) || '(No profile yet.)'
     ];
     var lt = logText(); if (lt) lines.push('', '## My recent quiz mistakes (newest first)', lt);
+    var mt = masteryText(); if (mt) lines.push('', '## My mastery by topic (weakest first; percentages come from my own quizzes and flashcards)', mt);
     return lines.join('\n');
   }
   function planContents() {
@@ -2756,65 +3101,40 @@
   }
   async function renderReview() {
     var root = $('review-root'); root.innerHTML = '';
-    root.classList.toggle('rv-wide', !reviewSession);
-    if (reviewSession) return renderReviewStage(root);
+    root.classList.add('rv-wide');
     var grid = h('div', { class: 'rv-grid' });
     var left = h('aside', { class: 'planner', 'aria-label': 'แพลนเนอร์' });
     var right = h('div', { class: 'rv-right' });
     grid.appendChild(left); grid.appendChild(right); root.appendChild(grid);
     renderPlanner(left);
     right.appendChild(h('h1', { class: 'page-title', text: 'ทบทวน' }));
+    var wideAd = adaptCard(); if (wideAd) right.appendChild(wideAd);
     var tabBtn = function (id, label) {
       return h('button', { type: 'button', 'aria-pressed': planTab === id ? 'true' : 'false', text: label, onclick: function () { if (planTab !== id) { planTab = id; renderReview(); } } });
     };
-    right.appendChild(h('div', { class: 'seg rv-seg', role: 'group', 'aria-label': 'เลือกโหมด' }, [tabBtn('cards', 'บัตรคำและข้อที่ผิด'), tabBtn('chat', 'คุยวางแผนกับพี่สาว')]));
+    right.appendChild(h('div', { class: 'seg rv-seg', role: 'group', 'aria-label': 'เลือกโหมด' }, [tabBtn('cards', 'ข้อที่เคยผิด'), tabBtn('chat', 'คุยวางแผนกับพี่สาว')]));
     var body = h('div', { class: 'rv-body' }); right.appendChild(body);
     if (planTab === 'chat') renderPlanChat(body); else await renderReviewCards(body);
   }
   async function renderReviewCards(root) {
     var r = await dueCards();
-    var decks = await DB.all('decks').catch(function () { return []; });
-    decks.sort(function (a, b) { return b.created - a.created; });
-    root.appendChild(h('p', { class: 'page-lead', text: 'บัตรคำทุกชุดที่พี่สาวทำให้จะมาอยู่ที่นี่ พี่สาวนัดทบทวนแต่ละใบตามจังหวะความจำ ใบที่จำได้แล้วจะเว้นนานขึ้น ใบที่ยังจำไม่ได้จะกลับมาเร็ว' }));
-    var hero = h('div', { class: 'review-hero' });
-    hero.appendChild(h('div', { class: 'review-count' }, [String(r.due.length), h('small', { text: 'ใบที่ต้องทบทวนวันนี้' })]));
-    if (r.due.length) hero.appendChild(h('div', { class: 'row' }, [h('button', { class: 'primary', type: 'button', text: 'เริ่มทบทวน', onclick: function () { startReview(r.due.slice(0, 60)); } })]));
-    else {
-      var next = r.all.filter(function (c) { return c.due > Date.now(); }).sort(function (a, b) { return a.due - b.due; })[0];
-      hero.appendChild(h('p', { class: 'muted', text: r.all.length ? 'ทบทวนครบแล้ว ใบถัดไปครบกำหนดในอีก ' + fmtInterval(next.due - Date.now()) : 'ยังไม่มีบัตรคำ ให้พี่สาวทำบัตรคำจากไฟล์หรือเรื่องที่เรียนก่อน' }));
-      if (!r.all.length) hero.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ให้พี่สาวทำบัตรคำ', onclick: function () { showView('chat'); openTools(); } })]));
-    }
-    root.appendChild(hero);
+    var moved = h('div', { class: 'moved-card' }, [
+      h('b', { text: '🗂 บัตรคำย้ายไปที่เมนู Flashcard แล้ว' }),
+      h('p', { class: 'muted', text: r.due.length ? 'วันนี้มีบัตรคำครบกำหนด ' + r.due.length + ' ใบ ชุดบัตรคำ การแก้บัตร นำเข้า/ส่งออก และปุ่ม "ให้พี่สาวทำบัตรคำ" อยู่ที่นั่น' : 'ชุดบัตรคำ การแก้บัตร นำเข้า/ส่งออก และปุ่ม "ให้พี่สาวทำบัตรคำ" อยู่ที่นั่น' }),
+      h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ไปที่ Flashcard', onclick: function () { showView('flash'); } })])
+    ]);
+    root.appendChild(moved);
     var quizMistakes = state.log.filter(function (x) { return x.type === 'quiz'; });
     root.appendChild(h('h2', { class: 'section-title', text: 'ฝึกข้อที่เคยผิด' }));
     root.appendChild(h('p', { class: 'muted', text: quizMistakes.length ? 'มีข้อที่เคยทำผิด ' + quizMistakes.length + ' ข้อ พี่สาวจะออกข้อใหม่ที่ใช้แนวคิดเดียวกันแต่เปลี่ยนตัวเลขและสถานการณ์' : 'ยังไม่มีข้อที่เคยผิด ทำแนวข้อสอบก่อนแล้วพี่สาวจะจดจุดที่พลาดไว้ให้' }));
-    if (quizMistakes.length) root.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ฝึกข้อที่เคยผิด 10 ข้อ', onclick: function () { runAction('quiz', { count: 10, level: 'exam', mistakes: true }); } })]));
-    root.appendChild(h('h2', { class: 'section-title', text: 'ชุดบัตรคำ' }));
-    if (!decks.length) { root.appendChild(h('p', { class: 'muted', text: 'ยังไม่มีชุดบัตรคำ' })); return; }
-    var ul = h('ul', { class: 'deck-list' });
-    decks.forEach(function (d) {
-      var cards = r.all.filter(function (c) { return c.deckId === d.id; });
-      var due = cards.filter(function (c) { return c.due <= Date.now(); });
-      var learned = cards.filter(function (c) { return (c.interval || 0) >= 7; }).length;
-      var del = h('button', { class: 'del', type: 'button', text: 'ลบ' });
-      del.addEventListener('click', async function () {
-        if (!del.classList.contains('confirm')) { del.classList.add('confirm'); del.textContent = 'ยืนยันลบ'; setTimeout(function () { del.classList.remove('confirm'); del.textContent = 'ลบ'; }, 3500); return; }
-        for (var i = 0; i < cards.length; i++) await DB.del('cards', cards[i].id).catch(function () {});
-        await DB.del('decks', d.id).catch(function () {});
-        refreshDue(); renderReview();
-      });
-      ul.appendChild(h('li', null, [
-        h('div', { class: 'grow' }, [h('span', { class: 't', text: d.title }), h('span', { class: 'm', text: cards.length + ' ใบ  จำได้ดีแล้ว ' + learned + ' ใบ  ครบกำหนด ' + due.length + ' ใบ' })]),
-        h('button', { class: 'textbtn', type: 'button', text: due.length ? 'ทบทวน' : 'ฝึกทั้งชุด', onclick: function () { startReview(due.length ? due : shuffle(cards.slice())); } }),
-        del
-      ]));
-    });
-    root.appendChild(ul);
-  }
-  function startReview(cards) {
+    root.appendChild(h('div', { class: 'row' }, [
+      quizMistakes.length ? h('button', { class: 'textbtn strong', type: 'button', text: 'ฝึกข้อที่เคยผิด 10 ข้อ', onclick: function () { runAction('quiz', { count: 10, level: 'exam', mistakes: true }); } }) : null,
+      h('button', { class: 'textbtn', type: 'button', text: 'เปิดสมุดข้อผิด', onclick: function () { showView('notebook'); } })
+    ]));
+  }  function startReview(cards) {
     if (!cards.length) return;
     reviewSession = { queue: cards.map(function (c) { return c.id; }), cards: cards, pos: 0, flipped: false, again: {}, done: 0, total: cards.length };
-    renderReview();
+    if (state.view !== 'flash') showView('flash'); else renderFlash();
   }
   function renderReviewStage(root) {
     var rs = reviewSession;
@@ -2822,21 +3142,21 @@
     root.appendChild(stage);
     if (rs.pos >= rs.queue.length) {
       stage.appendChild(h('h1', { class: 'page-title', text: 'ทบทวนเสร็จแล้ว' }));
-      stage.appendChild(h('p', { class: 'page-lead', text: 'ทบทวนไป ' + rs.total + ' ใบ พี่สาวนัดรอบถัดไปของแต่ละใบไว้ให้แล้ว กลับมาอีกครั้งเมื่อมีตัวเลขขึ้นที่เมนูทบทวน' }));
-      stage.appendChild(h('button', { class: 'primary', type: 'button', text: 'กลับหน้าทบทวน', onclick: function () { reviewSession = null; renderReview(); } }));
+      stage.appendChild(h('p', { class: 'page-lead', text: 'ทบทวนไป ' + rs.total + ' ใบ พี่สาวนัดรอบถัดไปของแต่ละใบไว้ให้แล้ว กลับมาอีกครั้งเมื่อมีตัวเลขขึ้นที่เมนู Flashcard' }));
+      stage.appendChild(h('button', { class: 'primary', type: 'button', text: 'กลับไปที่ Flashcard', onclick: function () { reviewSession = null; renderFlash(); } }));
       return;
     }
     var id = rs.queue[rs.pos];
     var card = rs.cards.find(function (c) { return c.id === id; });
-    stage.appendChild(h('div', { class: 'row', style: 'justify-content:space-between' }, [h('span', { class: 'muted', text: 'ใบที่ ' + (rs.pos + 1) + ' จาก ' + rs.queue.length }), h('button', { class: 'mini', type: 'button', text: 'จบการทบทวน', onclick: function () { reviewSession = null; renderReview(); } })]));
+    stage.appendChild(h('div', { class: 'row', style: 'justify-content:space-between' }, [h('span', { class: 'muted', text: 'ใบที่ ' + (rs.pos + 1) + ' จาก ' + rs.queue.length }), h('button', { class: 'mini', type: 'button', text: 'จบการทบทวน', onclick: function () { reviewSession = null; renderFlash(); } })]));
     stage.appendChild(h('div', { class: 'progressbar' }, [h('i', { style: 'width:' + Math.round(rs.pos / rs.queue.length * 100) + '%' })]));
-    stage.appendChild(indexCard(card, rs.flipped, function () { rs.flipped = true; renderReview(); }));
-    if (!rs.flipped) stage.appendChild(h('div', { class: 'grade' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ดูคำตอบ', onclick: function () { rs.flipped = true; renderReview(); } })]));
+    stage.appendChild(indexCard(card, rs.flipped, function () { rs.flipped = true; renderFlash(); }));
+    if (!rs.flipped) stage.appendChild(h('div', { class: 'grade' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ดูคำตอบ', onclick: function () { rs.flipped = true; renderFlash(); } })]));
     else stage.appendChild(gradeButtons(card, async function (grade) {
       await reviewCard(card, grade);
       if (grade === 0 && !rs.again[id]) { rs.queue.push(id); rs.again[id] = true; }
       rs.pos++; rs.flipped = false;
-      renderReview();
+      renderFlash();
     }));
     typeset(stage);
   }
@@ -3201,6 +3521,766 @@
     root.appendChild(h('p', { class: 'muted mt-foot', text: 'คำแนะนำนี้ช่วยวางแผนการเรียนเท่านั้น ไม่ใช่การวินิจฉัยทางการแพทย์ ถ้าเหนื่อยหรือเครียดมากต่อเนื่อง ลองคุยกับคนที่ไว้ใจหรือครูแนะแนว หรือโทรสายด่วนสุขภาพจิต 1323' }));
 
     refresh(); drawSummary();
+  }
+
+  // ---------- error notebook (สมุดข้อผิด) ----------
+  var ETYPES = { concept: 'เข้าใจหลักการผิด', recall: 'จำสูตร/ข้อเท็จจริงผิด', calc: 'คำนวณพลาด', read: 'อ่านโจทย์ไม่ครบ', careless: 'ประมาท', unknown: 'ยังไม่เคยเรียนเรื่องนี้', skip: 'ไม่ได้ตอบ' };
+  function validEt(x) { return ETYPES[x] ? x : ''; }
+  function normErr(list) {
+    return (Array.isArray(list) ? list : []).filter(function (x) { return x && typeof x === 'object' && str(x.q).trim(); }).slice(0, 300).map(function (x) {
+      return { id: str(x.id) || newId('e'), t: +x.t || 0, subject: SUBJECT_LABEL[x.subject] ? x.subject : 'other', topic: clip(x.topic, 80), sub: clip(x.sub, 80), q: clip(x.q, 400), mine: clip(x.mine, 200), right: clip(x.right, 200),
+        why: clip(x.why, 240), etype: validEt(x.etype), explanation: clip(x.explanation, 900), technique: clip(x.technique, 300), trap: clip(x.trap, 300), src: x.src === 'card' ? 'card' : 'quiz',
+        status: x.status === 'mastered' ? 'mastered' : 'open', ok: Math.max(0, Math.min(5, +x.ok || 0)), due: +x.due || 0, sched: +x.sched || 0, n: Math.max(1, +x.n || 1) };
+    });
+  }
+  function saveErr() { return kvSet('errbook', state.errbook.slice(0, 300)); }
+  function importLogToErr() {
+    state.log.forEach(function (x) {
+      if (!x || !x.q) return;
+      state.errbook.push({ id: newId('e'), t: x.t || 0, subject: SUBJECT_LABEL[x.subject] ? x.subject : 'other', topic: clip(x.topic, 80), sub: '', q: clip(x.q, 400), mine: clip(x.chosen, 200), right: clip(x.correct, 200), why: '', etype: x.type === 'card' ? 'recall' : '', explanation: '', technique: '', trap: '', src: x.type === 'card' ? 'card' : 'quiz', status: 'open', ok: 0, due: 0, sched: 0, n: 1 });
+    });
+    state.errbook = normErr(state.errbook); saveErr();
+  }
+  function addError(it) {
+    var q = clip(it.q, 400), old = state.errbook.filter(function (x) { return x.q === q; })[0];
+    var e = Object.assign({ id: newId('e'), status: 'open', ok: 0, due: 0, sched: 0, n: 1 }, old || {}, {
+      t: Date.now(), subject: SUBJECT_LABEL[it.subject] ? it.subject : 'other', topic: clip(it.topic, 80), sub: clip(it.sub, 80), q: q, mine: clip(it.mine, 200), right: clip(it.right, 200),
+      why: clip(it.why, 240), etype: validEt(it.etype), explanation: clip(it.explanation, 900), technique: clip(it.technique, 300), trap: clip(it.trap, 300), src: it.src === 'card' ? 'card' : 'quiz' });
+    if (old) { e.n = (old.n || 1) + 1; e.status = 'open'; e.ok = 0; state.errbook = state.errbook.filter(function (x) { return x !== old; }); }
+    state.errbook.unshift(e); if (state.errbook.length > 300) state.errbook.length = 300;
+    saveErr(); updateNbBadge();
+  }
+  // a wrong quiz answer becomes a notebook entry: the reason comes with the quiz itself (written when it was made), so it costs no extra tokens
+  function noteError(qq, ans, sj) {
+    var got = answered(qq, ans), why = '', et = '';
+    if (!got) { why = 'ไม่ได้ตอบข้อนี้'; et = 'skip'; }
+    else if (qq.type === 'numeric') { why = qq.commonErr || ''; et = qq.etype || ''; }
+    else { why = (qq.whys && qq.whys[ans]) || ''; et = (qq.etypes && qq.etypes[ans]) || ''; }
+    addError({ src: 'quiz', subject: sj, topic: qq.topic, sub: qq.sub, q: qq.question,
+      mine: got ? (qq.type === 'numeric' ? str(ans) + (qq.unit ? ' ' + qq.unit : '') : clip(qq.choices[ans], 150)) : '(ไม่ได้ตอบ)',
+      right: qq.type === 'numeric' ? String(qq.numeric) + (qq.unit ? ' ' + qq.unit : '') : clip(qq.choices[qq.answer], 150),
+      why: why, etype: et, explanation: qq.explanation, technique: qq.technique, trap: qq.trap });
+  }
+  function dueErrors() { var now = Date.now(); return state.errbook.filter(function (x) { return x.status === 'open' && x.due && x.due <= now; }); }
+  function updateNbBadge() { var b = $('nb-badge'); if (!b) return; var n = dueErrors().length; b.hidden = !n; b.textContent = n > 99 ? '99+' : String(n); }
+  function markNew(v) { try { localStorage.setItem('us-new-' + v, '1'); } catch (e) {} updateNewTags(); }
+  function updateNewTags() { ['notebook', 'mastery', 'kmap', 'flash'].forEach(function (v) { var t = $('nw-' + v), seen = false; try { seen = localStorage.getItem('us-new-' + v) === '1'; } catch (e) {} if (t) t.hidden = seen; }); }
+  var nbF = { s: 'all', e: 'all', done: false }, nbMode = {}, nbArm = '', nbArmTimer = 0, nbReview = null, nbBusy = false;
+  function mdNode(text, cls) { var d = h('div', { class: 'md ' + (cls || ''), html: renderMarkdown(text) }); return d; }
+  function simTopic(it, hard) { return (hard ? 'ข้อที่ยากขึ้นจากเรื่อง ' : 'ข้อคล้ายกับโจทย์นี้ เรื่อง ') + (it.topic || '') + (it.sub ? ' › ' + it.sub : '') + ': ' + clip(it.q, 160); }
+  async function analyzeEntry(it, btn) {
+    if (nbBusy) return;
+    if (!S.apiKey) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    nbBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังวิเคราะห์…';
+    try {
+      var schema = { type: 'object', properties: { why: { type: 'string' }, error_type: { type: 'string', enum: ['concept', 'recall', 'calc', 'read', 'careless'] }, principle: { type: 'string' }, technique: { type: 'string' } }, required: ['why', 'error_type', 'principle'] };
+      var prompt = 'Analyze this wrong answer of a Thai student. Write in Thai. Give: why (one short sentence: the misconception or slip that likely led to the wrong answer, max 25 words), error_type (concept = misunderstood the principle, recall = remembered a fact or formula wrongly, calc = calculation or sign slip, read = misread the question, careless = careless slip), principle (the key principle or rule they should remember, 1-3 sentences, use $...$ LaTeX for math), technique (a quick memory or checking technique, one sentence).\n\nQuestion: ' + it.q + '\nStudent answered: ' + it.mine + '\nCorrect answer: ' + it.right;
+      var acc = await gemini({ system: 'You are a careful tutor for Thai high-school students. Answer only with the JSON requested.', code: false, search: false, thinking: 'low', noChat: true, label: 'วิเคราะห์ข้อผิด', schema: schema,
+        buildContents: async function () { return [{ role: 'user', parts: [{ text: prompt }] }]; } });
+      checkFinish(acc);
+      var raw = acc.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''), d;
+      try { d = JSON.parse(raw); } catch (e2) { var s = raw.indexOf('{'), t = raw.lastIndexOf('}'); d = JSON.parse(raw.slice(s, t + 1)); }
+      it.why = clip(fixLatex(str(d.why)), 240); it.etype = validEt(str(d.error_type)) || it.etype; it.explanation = clip(fixLatex(str(d.principle)), 900); it.technique = clip(fixLatex(str(d.technique)), 300);
+      await saveErr();
+    } catch (e) { showToast(errorCopy(e)); }
+    nbBusy = false; renderNotebook();
+  }
+  function entryNode(it) {
+    var mode = nbMode[it.id], done = it.status === 'mastered';
+    var card = h('div', { class: 'nb-ent' + (done ? ' done' : ''), 'data-s': it.subject }, [
+      h('div', { class: 'nb-top' }, [
+        h('span', { class: 'nb-tag s', text: SUBJECT_LABEL[it.subject] || '' }),
+        (it.topic || it.sub) ? h('span', { class: 'nb-tag', text: (it.topic || '') + (it.sub ? ' › ' + it.sub : '') }) : null,
+        it.etype ? h('span', { class: 'nb-tag e', text: ETYPES[it.etype] }) : null,
+        done ? h('span', { class: 'nb-tag ok', text: 'ผ่านแล้ว ✓' }) : null,
+        it.src === 'card' ? h('span', { class: 'nb-tag', text: 'บัตรคำ' }) : null,
+        h('span', { class: 'nb-tag', style: 'margin-left:auto', text: fmtDate(it.t) })
+      ]),
+      mdNode(it.q, 'nb-q'),
+      h('div', { class: 'nb-ans' }, [
+        h('div', null, [h('b', { text: 'ฉันตอบ' }), h('span', { class: 'mine' }, ['❌ ', mdNode(it.mine || '-', 'inl')])]),
+        h('div', null, [h('b', { text: 'คำตอบที่ถูก' }), h('span', { class: 'right' }, ['✅ ', mdNode(it.right || '-', 'inl')])])
+      ])
+    ]);
+    if (it.why) card.appendChild(h('div', { class: 'nb-why' }, [h('b', { text: 'ผิดเพราะ ' }), mdNode(it.why, 'inl')]));
+    else if (it.trap) card.appendChild(h('div', { class: 'nb-why soft' }, [h('b', { text: 'กับดักที่พบบ่อย ' }), mdNode(it.trap, 'inl')]));
+    if (!it.why && !it.explanation) {
+      var an = h('button', { class: 'textbtn', type: 'button', text: 'ให้พี่สาววิเคราะห์ข้อนี้ (ใช้ AI)' });
+      an.addEventListener('click', function () { analyzeEntry(it, an); });
+      card.appendChild(h('div', { class: 'row' }, [an]));
+    }
+    var arm = function (key, run) { return function () { if (nbArm !== key) { nbArm = key; clearTimeout(nbArmTimer); nbArmTimer = setTimeout(function () { nbArm = ''; renderNotebook(); }, 3500); renderNotebook(); return; } nbArm = ''; run(); }; };
+    var btns = [
+      ['pr', 'จำหลักการ', function () { nbMode[it.id] = mode === 'pr' ? null : 'pr'; renderNotebook(); }],
+      ['sim', 'ทำโจทย์คล้าย', arm(it.id + ':sim', function () { runAction('quiz', { count: 3, level: 'exam', topic: simTopic(it, false) }); })],
+      ['hard', 'ทำข้อยากขึ้น', arm(it.id + ':hard', function () { runAction('quiz', { count: 3, level: 'hard', topic: simTopic(it, true) }); })],
+      ['rv', 'ทบทวนอีกครั้ง', function () { nbMode[it.id] = mode === 'rv' ? null : 'rv'; renderNotebook(); }]
+    ];
+    card.appendChild(h('div', { class: 'nb-acts' }, btns.map(function (b) {
+      var armed = nbArm === it.id + ':' + b[0];
+      return h('button', { class: 'nb-ab' + (armed ? ' armed' : ''), type: 'button', 'aria-pressed': mode === b[0] ? 'true' : 'false', text: armed ? 'ยืนยัน (ใช้ AI)' : b[1], onclick: b[2] });
+    })));
+    if (it.due && it.status === 'open') card.appendChild(h('div', { class: 'nb-sched', text: '⏰ ' + (it.due <= Date.now() ? 'ถึงเวลาทบทวนแล้ว' : 'ทบทวนอีกครั้งในอีก ' + fmtInterval(it.due - Date.now())) }));
+    if (mode === 'pr') {
+      var p = h('div', { class: 'nb-panel' }, [h('h4', { text: '📌 หลักการที่ต้องจำ' })]);
+      if (it.explanation) p.appendChild(mdNode(it.explanation));
+      else p.appendChild(h('p', { class: 'muted', text: 'ข้อนี้ยังไม่มีหลักการเก็บไว้ กด "ให้พี่สาววิเคราะห์ข้อนี้" ด้านบนเพื่อสร้าง' }));
+      if (it.technique) { p.appendChild(h('b', { text: 'เคล็ดจำ: ' })); p.appendChild(mdNode(it.technique, 'inl')); }
+      card.appendChild(p);
+    }
+    if (mode === 'rv') {
+      var days = function (d, label) { return h('button', { class: 'textbtn', type: 'button', text: label, onclick: function () { it.due = Date.now() + d * DAY; it.sched = d; it.status = 'open'; saveErr(); nbMode[it.id] = null; updateNbBadge(); showToast('ตั้งเตือนทบทวนอีก ' + d + ' วันแล้ว'); renderNotebook(); } }); };
+      card.appendChild(h('div', { class: 'nb-panel' }, [h('h4', { text: '⏰ ให้เตือนทบทวนข้อนี้เมื่อไหร่' }), h('div', { class: 'row' }, [days(1, 'พรุ่งนี้'), days(3, 'อีก 3 วัน'), days(7, 'อีก 7 วัน')]),
+        h('p', { class: 'muted', text: 'ถึงวันแล้วข้อนี้จะขึ้นในส่วน "ถึงเวลาทบทวน" ด้านบนของสมุด ตอบจำได้ 2 ครั้งติดจะถูกย้ายไป "ผ่านแล้ว"' })]));
+    }
+    if (done) card.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn', type: 'button', text: 'เปิดข้อนี้ใหม่', onclick: function () { it.status = 'open'; it.ok = 0; saveErr(); renderNotebook(); } })]));
+    else card.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn', type: 'button', text: 'ลบออกจากสมุด', onclick: function () { if (nbArm !== 'del:' + it.id) { nbArm = 'del:' + it.id; clearTimeout(nbArmTimer); nbArmTimer = setTimeout(function () { nbArm = ''; renderNotebook(); }, 3500); renderNotebook(); return; } nbArm = ''; state.errbook = state.errbook.filter(function (x) { return x !== it; }); saveErr(); updateNbBadge(); renderNotebook(); } }, [])]));
+    var last = card.lastChild.firstChild; if (!done && nbArm === 'del:' + it.id) { last.textContent = 'ยืนยันลบ'; last.classList.add('danger'); }
+    typeset(card);
+    return card;
+  }
+  function renderNotebook() {
+    var root = $('notebook-root'); if (!root) return; root.innerHTML = '';
+    root.appendChild(h('h1', { class: 'page-title', text: 'สมุดข้อผิดของฉัน' }));
+    root.appendChild(h('p', { class: 'page-lead', text: 'ทุกข้อที่ทำพลาดจากแนวข้อสอบและบัตรคำ พี่สาวจดไว้พร้อมเหตุผลว่าพลาดเพราะอะไร จะได้ไม่พลาดซ้ำ' }));
+    var all = state.errbook, open = all.filter(function (x) { return x.status === 'open'; });
+    var cnt = {}; open.forEach(function (x) { if (x.etype) cnt[x.etype] = (cnt[x.etype] || 0) + 1; });
+    var topE = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
+    root.appendChild(h('div', { class: 'statgrid nb-stats' }, [
+      h('div', { class: 'stat' }, [h('b', { text: String(all.length) }), h('span', { text: 'ข้อในสมุด' })]),
+      h('div', { class: 'stat' }, [h('b', { text: String(open.length) }), h('span', { text: 'ข้อที่ยังไม่ผ่าน' })]),
+      h('div', { class: 'stat' }, [h('b', { class: 'sm', text: topE ? ETYPES[topE] : '–' }), h('span', { text: topE ? 'พลาดบ่อยสุด (' + cnt[topE] + ' ข้อ)' : 'พลาดบ่อยสุด' })])
+    ]));
+    if (!all.length) { root.appendChild(h('div', { class: 'card-like' }, [h('p', { text: 'ยังไม่มีข้อผิดในสมุด' }), h('p', { class: 'muted', text: 'ลองทำแนวข้อสอบหรือทบทวนบัตรคำสักชุด ข้อที่ทำพลาดจะมาอยู่ที่นี่เอง' }), h('button', { class: 'textbtn strong', type: 'button', text: 'ไปที่เครื่องมือช่วยเรียน', onclick: function () { openTools(); } })])); return; }
+    // due for review
+    var due = dueErrors();
+    if (nbReview) {
+      var it = state.errbook.filter(function (x) { return x.id === nbReview.ids[nbReview.i]; })[0];
+      var box = h('div', { class: 'nb-due' }, [h('b', { text: 'ทบทวนข้อผิด ' + Math.min(nbReview.i + 1, nbReview.ids.length) + '/' + nbReview.ids.length })]);
+      if (!it) { box.appendChild(h('p', { text: 'ทบทวนครบแล้ว เก่งมาก' })); box.appendChild(h('button', { class: 'textbtn', type: 'button', text: 'ปิด', onclick: function () { nbReview = null; renderNotebook(); } })); }
+      else {
+        box.appendChild(mdNode(it.q, 'nb-q'));
+        if (!nbReview.shown) box.appendChild(h('button', { class: 'textbtn strong', type: 'button', text: 'ดูคำตอบ', onclick: function () { nbReview.shown = true; renderNotebook(); } }));
+        else {
+          box.appendChild(h('div', { class: 'nb-ans' }, [h('div', null, [h('b', { text: 'คำตอบที่ถูก' }), h('span', { class: 'right' }, ['✅ ', mdNode(it.right, 'inl')])])]));
+          if (it.why) box.appendChild(h('div', { class: 'nb-why' }, [h('b', { text: 'เคยผิดเพราะ ' }), mdNode(it.why, 'inl')]));
+          var nextCard = function (good) {
+            if (good) { it.ok = (it.ok || 0) + 1; if (it.ok >= 2) { it.status = 'mastered'; it.due = 0; } else it.due = Date.now() + 3 * DAY; }
+            else { it.ok = 0; it.due = Date.now() + DAY; }
+            saveErr(); updateNbBadge(); nbReview.i++; nbReview.shown = false; renderNotebook();
+          };
+          box.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn', type: 'button', text: 'ยังจำไม่ได้', onclick: function () { nextCard(false); } }), h('button', { class: 'textbtn strong', type: 'button', text: 'จำได้', onclick: function () { nextCard(true); } })]));
+        }
+      }
+      root.appendChild(box); typeset(box);
+    } else if (due.length) {
+      root.appendChild(h('div', { class: 'nb-due' }, [h('b', { text: '⏰ ถึงเวลาทบทวน ' + due.length + ' ข้อ' }), h('button', { class: 'textbtn strong', type: 'button', text: 'เริ่มทบทวน', onclick: function () { nbReview = { ids: due.map(function (x) { return x.id; }), i: 0, shown: false }; renderNotebook(); } })]));
+    }
+    // filters
+    var subs = []; all.forEach(function (x) { if (subs.indexOf(x.subject) < 0) subs.push(x.subject); });
+    var chip = function (label, on, fn) { return h('button', { class: 'chip', type: 'button', 'aria-pressed': on ? 'true' : 'false', text: label, onclick: fn }); };
+    root.appendChild(h('div', { class: 'subjects nb-chips', role: 'group', 'aria-label': 'กรองตามวิชา' }, [chip('ทุกวิชา', nbF.s === 'all', function () { nbF.s = 'all'; renderNotebook(); })].concat(subs.map(function (s) { return chip(SUBJECT_LABEL[s] || s, nbF.s === s, function () { nbF.s = s; renderNotebook(); }); }))));
+    var ets = Object.keys(ETYPES).filter(function (e) { return all.some(function (x) { return x.etype === e; }); });
+    root.appendChild(h('div', { class: 'subjects nb-chips', role: 'group', 'aria-label': 'กรองตามประเภทความผิด' }, [chip('ทุกประเภท', nbF.e === 'all', function () { nbF.e = 'all'; renderNotebook(); })].concat(ets.map(function (e) { return chip(ETYPES[e], nbF.e === e, function () { nbF.e = e; renderNotebook(); }); })).concat([chip('แสดงข้อที่ผ่านแล้ว', nbF.done, function () { nbF.done = !nbF.done; renderNotebook(); })])));
+    var list = all.filter(function (x) { return (nbF.s === 'all' || x.subject === nbF.s) && (nbF.e === 'all' || x.etype === nbF.e) && (nbF.done || x.status === 'open'); });
+    if (!list.length) root.appendChild(h('p', { class: 'muted', text: 'ไม่มีข้อที่ตรงกับตัวกรอง' }));
+    list.slice(0, 60).forEach(function (x) { root.appendChild(entryNode(x)); });
+    if (list.length > 60) root.appendChild(h('p', { class: 'muted', text: 'แสดง 60 ข้อล่าสุดจาก ' + list.length + ' ข้อ ใช้ตัวกรองเพื่อดูข้อที่เหลือ' }));
+  }
+
+  // ---------- mastery ----------
+  // Topic names: a curriculum outline made once by พี่สาว per subject (optional, 1 AI call) plus whatever topics show up in the quizzes and flashcards.
+  // Percentages come only from what you actually did (quiz answers, flashcard progress); newer answers weigh more. A topic with no practice shows "ยังไม่มีข้อมูล", not 0%.
+  var MS_SUBJ = ['math', 'physics', 'chem', 'bio', 'python', 'english'];
+  var msSel = '', msOpen = {}, msBusy = false, msTops = null;
+  function normMastery(v) {
+    var out = { trees: {} };
+    if (v && typeof v === 'object' && v.trees && typeof v.trees === 'object') {
+      MS_SUBJ.forEach(function (s) {
+        var t = v.trees[s]; if (!t || !Array.isArray(t.tree)) return;
+        out.trees[s] = { at: +t.at || 0, links: (Array.isArray(t.links) ? t.links : []).slice(0, 30).filter(function (l) { return Array.isArray(l) && l.length === 2; }).map(function (l) { return [clip(l[0], 40), clip(l[1], 40)]; }), tree: t.tree.slice(0, 14).map(function (n) { return n && str(n.n).trim() ? { n: clip(n.n, 40), kids: (Array.isArray(n.kids) ? n.kids : []).slice(0, 10).map(function (k) { return clip(k, 40); }).filter(Boolean) } : null; }).filter(Boolean) };
+      });
+    }
+    return out;
+  }
+  function normName(s) { return str(s).toLowerCase().replace(/[\s\-_()\/·.,:]/g, ''); }
+  function nameMatch(a, b) { a = normName(a); b = normName(b); return !!a && !!b && (a === b || (a.length >= 3 && b.indexOf(a) >= 0) || (b.length >= 3 && a.indexOf(b) >= 0)); }
+  async function masteryEvidence() {
+    var ev = [], now = Date.now();
+    (await DB.all('results').catch(function () { return []; })).forEach(function (r) {
+      (r.topics || []).forEach(function (t) { if (t && t.subject && t.topic) ev.push({ s: t.subject, topic: t.topic, sub: t.sub || '', v: t.ok ? 1 : 0, t: r.date || now }); });
+    });
+    (await DB.all('cards').catch(function () { return []; })).forEach(function (c) {
+      if (!c.last || !c.subject || !c.topic) return;
+      ev.push({ s: c.subject, topic: c.topic, sub: '', v: c.interval >= 7 ? 1 : c.interval >= 3 ? 0.8 : c.interval >= 1 ? 0.55 : 0.15, t: c.last });
+    });
+    return ev;
+  }
+  function msStat(list) { var now = Date.now(), sw = 0, sv = 0, mt = 0; list.forEach(function (e) { var w = Math.exp(-Math.max(0, now - e.t) / (60 * DAY)); sw += w; sv += w * e.v; if (e.t > mt) mt = e.t; }); return { sw: sw, sv: sv, k: list.length, mt: mt }; }
+  function msBuild(ev, s) {
+    var skel = (state.mastery.trees[s] && state.mastery.trees[s].tree) || [];
+    var tops = skel.map(function (t) { return { n: t.n, from: 'c', own: [], kids: t.kids.map(function (k) { return { n: k, from: 'c', own: [] }; }) }; });
+    ev.filter(function (e) { return e.s === s; }).forEach(function (e) {
+      var top = tops.filter(function (t) { return nameMatch(t.n, e.topic); })[0];
+      if (!top && e.sub) top = tops.filter(function (t) { return t.kids.some(function (k) { return nameMatch(k.n, e.sub); }); })[0];
+      if (!top) { top = { n: e.topic, from: 't', own: [], kids: [] }; tops.push(top); }
+      if (e.sub && !nameMatch(top.n, e.sub)) {
+        var kid = top.kids.filter(function (k) { return nameMatch(k.n, e.sub); })[0];
+        if (!kid) { kid = { n: e.sub, from: 't', own: [] }; top.kids.push(kid); }
+        kid.own.push(e);
+      } else top.own.push(e);
+    });
+    tops.forEach(function (t) {
+      t.kids.forEach(function (k) { var a = msStat(k.own); k.k = a.k; k.mt = a.mt; k.sw = a.sw; k.sv = a.sv; k.p = a.k ? Math.round(a.sv / a.sw * 100) : null; });
+      var a = msStat(t.own), sw = a.sw, sv = a.sv, kk = a.k;
+      t.kids.forEach(function (k) { if (k.k) { sw += k.sw; sv += k.sv; kk += k.k; } });
+      t.k = kk; t.mt = Math.max(a.mt, t.kids.reduce(function (m, k) { return Math.max(m, k.mt || 0); }, 0)); t.sw = sw; t.sv = sv; t.p = kk ? Math.round(sv / sw * 100) : null;
+    });
+    return tops;
+  }
+  function msLeaves(tops, s) {
+    var out = [];
+    tops.forEach(function (t) {
+      var withKids = t.kids.filter(function (k) { return k.k; });
+      if (withKids.length) withKids.forEach(function (k) { out.push({ s: s, top: t.n, n: k.n, p: k.p, k: k.k }); });
+      else if (t.k) out.push({ s: s, top: t.n, n: t.n, p: t.p, k: t.k });
+    });
+    return out;
+  }
+  async function refreshMasteryCache() {
+    try {
+      var ev = await masteryEvidence(), all = [];
+      MS_SUBJ.forEach(function (s) { all = all.concat(msLeaves(msBuild(ev, s), s)); });
+      state.msCache = all.sort(function (a, b) { return a.p - b.p; });
+    } catch (e) {}
+  }
+  function masteryText() {
+    var l = (state.msCache || []).filter(function (x) { return x.k >= 3; }).slice(0, 8);
+    return l.map(function (x) { return '- [' + (SUBJECT_LABEL[x.s] || x.s) + '] ' + x.top + (x.n !== x.top ? ' > ' + x.n : '') + ': ' + x.p + '% (' + x.k + ' answers)'; }).join('\n');
+  }
+  function pCls(p) { return p === null ? 'na' : p >= 80 ? 'gr' : p >= 60 ? 'yl' : 'rd'; }
+  function pEmoji(p) { return p === null ? '⚪' : p >= 80 ? '🟢' : p >= 60 ? '🟡' : '🔴'; }
+  async function genSkeleton(s, btn) {
+    if (msBusy) return;
+    if (!S.apiKey) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    msBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังร่างหัวข้อ…';
+    try {
+      var en = (SUBJECTS.filter(function (x) { return x.id === s; })[0] || {}).en || s;
+      var schema = { type: 'object', properties: { topics: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, subtopics: { type: 'array', items: { type: 'string' } } }, required: ['name', 'subtopics'] } } }, required: ['topics'] };
+      var files = state.materials.filter(function (m) { return m.status === 'ready'; }).slice(0, 8).map(function (m) { return m.name; });
+      var prompt = 'List the main topics of the subject "' + en + '" as taught in Thai upper-secondary school (สสวท. curriculum) and tested in Thai university entrance exams (A-Level, TGAT). Give 6 to 10 broad topics in Thai (technical terms may stay in English in parentheses), each with 3 to 7 specific sub-topics in Thai. Names must be short (at most 30 characters), without numbering, in teaching order.' + (files.length ? ' The student keeps these files, so prefer the naming used in them when they match: ' + files.join('; ') + '.' : '');
+      var acc = await gemini({ system: 'You are a curriculum expert for the Thai school system. Answer only with the JSON requested.', code: false, search: false, thinking: 'low', noChat: true, label: 'โครงหัวข้อ Mastery', schema: schema,
+        buildContents: async function () { return [{ role: 'user', parts: [{ text: prompt }] }]; } });
+      checkFinish(acc);
+      var raw = acc.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''), d;
+      try { d = JSON.parse(raw); } catch (e2) { var a0 = raw.indexOf('{'), b0 = raw.lastIndexOf('}'); d = JSON.parse(raw.slice(a0, b0 + 1)); }
+      var tree = (d.topics || []).map(function (t) { return t && str(t.name).trim() ? { n: clip(t.name, 40), kids: (Array.isArray(t.subtopics) ? t.subtopics : []).map(function (k) { return clip(k, 40); }).filter(Boolean) } : null; }).filter(Boolean);
+      if (!tree.length) throw apiError('invalid_json');
+      state.mastery.trees[s] = { at: Date.now(), tree: tree, links: (state.mastery.trees[s] && state.mastery.trees[s].links) || [] };
+      await kvSet('mastery', state.mastery);
+    } catch (e) { showToast(errorCopy(e)); }
+    msBusy = false; renderMastery();
+  }
+  // add "read 20 min, practise 5, review tomorrow" for a topic to the planner
+  function addMasteryPlan(c) {
+    var P = state.planner, now = new Date(), nowM = now.getHours() * 60 + now.getMinutes(), today = dayKey(), tom = dayKeyPlus(1), label = (c.n === c.top ? c.n : c.n + ' (' + c.top + ')');
+    var plan = [[today, 'อ่าน ' + label, 20], [today, 'ทำโจทย์ ' + label + ' 5 ข้อ', 20], [tom, 'ทบทวน ' + label, 15]], added = 0, from = nowM + 15;
+    plan.forEach(function (p) {
+      var s = findSlot(p[0], p[2], p[0] === today ? from : 540);
+      if (s === null || (p[0] === today && s + p[2] > 1320)) { s = findSlot(tom, p[2], 540); p = [tom, p[1], p[2]]; }
+      var t = s === null ? null : normTask({ date: p[0], title: p[1], start: toHHMM(s), min: p[2], subject: c.s });
+      if (t) { P.tasks.push(t); added++; if (p[0] === today) from = s + p[2] + ADAPT_BUF; }
+    });
+    savePlanner(); showToast('ใส่ลงแพลนเนอร์แล้ว ' + added + ' รายการ', 'ดูแผน', function () { planDay = null; showView('review'); });
+  }
+  async function renderMastery() {
+    var root = $('mastery-root'); if (!root) return;
+    if (!msSel) msSel = 'bio';
+    var ev = await masteryEvidence();
+    root.innerHTML = '';
+    root.appendChild(h('h1', { class: 'page-title', text: 'Mastery' }));
+    root.appendChild(h('p', { class: 'page-lead', text: 'ความแม่นยำแยกตามหัวข้อ คำนวณจากแนวข้อสอบและบัตรคำที่คุณทำจริง คำตอบใหม่มีน้ำหนักมากกว่าคำตอบเก่า ยิ่งทำมากยิ่งแม่น' }));
+    root.appendChild(h('div', { class: 'subjects nb-chips', role: 'group', 'aria-label': 'เลือกวิชา' }, MS_SUBJ.map(function (s) {
+      return h('button', { class: 'chip', type: 'button', 'aria-pressed': msSel === s ? 'true' : 'false', text: SUBJECT_LABEL[s], onclick: function () { msSel = s; msOpen = {}; renderMastery(); } });
+    })));
+    var tops = msBuild(ev, msSel), all = msLeaves(tops, msSel);
+    var tot = tops.reduce(function (a, t) { return { sw: a.sw + (t.k ? t.sw : 0), sv: a.sv + (t.k ? t.sv : 0), k: a.k + t.k }; }, { sw: 0, sv: 0, k: 0 });
+    var skel = state.mastery.trees[msSel];
+    var tree = h('div', { class: 'ms-tree' });
+    var drawNode = function (n, depth) {
+      var has = n.kids && n.kids.length, open = !!msOpen[n.n] || (has && msOpen[n.n] === undefined && depth === 0 && tops.length <= 4);
+      var cls = pCls(n.p);
+      var sub = n.k ? (has ? 'จาก ' + n.kids.length + ' หัวข้อย่อย · ' + n.k + ' ข้อ' : 'จาก ' + n.k + ' ข้อ' + (n.k < 5 ? ' · ข้อมูลยังน้อย ประมาณการ' : '')) : 'ยังไม่มีข้อมูล ยังไม่ได้ทำแบบฝึกหัดเรื่องนี้';
+      var row = h(has ? 'button' : 'div', { class: 'ms-nd ms-' + cls + (depth ? ' k' : '') + (has ? ' p' : ''), type: has ? 'button' : null, 'aria-expanded': has ? (open ? 'true' : 'false') : null }, [
+        h('span', { class: 'ms-car', text: has ? (open ? '▾' : '▸') : '' }),
+        h('span', { class: 'ms-nm' }, [n.n, n.from === 'c' && !has ? h('span', { class: 'ms-src', text: 'หลักสูตร' }) : null, h('small', { text: sub })]),
+        h('span', { class: 'ms-bar' }, [h('i', { style: 'width:' + (n.p === null ? 0 : n.p) + '%' })]),
+        h('span', { class: 'ms-pc', text: n.p === null ? '–' : n.p + '%' }),
+        h('span', { text: pEmoji(n.p) })
+      ]);
+      if (has) row.addEventListener('click', function () { msOpen[n.n] = !open; renderMasteryTree(); });
+      var wrap = h('div', null, [row]);
+      if (has && open) wrap.appendChild(h('div', { class: 'ms-kids' }, n.kids.map(function (k) { return drawNode(k, depth + 1); })));
+      return wrap;
+    };
+    var renderMasteryTree = function () {
+      tree.innerHTML = '';
+      var tp = tot.k ? Math.round(tot.sv / tot.sw * 100) : null;
+      tree.appendChild(h('div', { class: 'ms-nd ms-' + pCls(tp) }, [h('span', { class: 'ms-car' }), h('span', { class: 'ms-nm' }, [h('b', { text: SUBJECT_LABEL[msSel] }), h('small', { text: tot.k ? 'รวม ' + tot.k + ' ข้อ · ถ่วงตามความใหม่ของคำตอบ' : 'ยังไม่มีข้อมูล' })]), h('span', { class: 'ms-bar' }, [h('i', { style: 'width:' + (tp || 0) + '%' })]), h('span', { class: 'ms-pc', text: tp === null ? '–' : tp + '%' }), h('span', { text: pEmoji(tp) })]));
+      tops.forEach(function (t) { tree.appendChild(drawNode(t, 0)); });
+    };
+    if (!tops.length) {
+      root.appendChild(h('div', { class: 'card-like' }, [h('p', { text: 'ยังไม่มีหัวข้อของวิชานี้' }), h('p', { class: 'muted', text: 'ทำแนวข้อสอบหรือบัตรคำของวิชานี้ หัวข้อจะขึ้นเอง หรือให้พี่สาวร่างโครงหัวข้อตามหลักสูตรก่อนก็ได้ (ใช้ AI 1 ครั้ง)' })]));
+    } else { renderMasteryTree(); root.appendChild(tree); }
+    // today's suggestion (computed here from your data, no tokens)
+    var firm = all.filter(function (x) { return x.k >= 5; }).sort(function (a, b) { return a.p - b.p; })[0];
+    var any = all.slice().sort(function (a, b) { return a.p - b.p; })[0];
+    var pick = firm || any;
+    if (pick) {
+      var low = all.filter(function (x) { return x.k < 5 && x.p < pick.p; }).sort(function (a, b) { return a.p - b.p; })[0];
+      var label = pick.n === pick.top ? pick.n : pick.n;
+      var card = h('div', { class: 'ms-today' }, [
+        h('h3', { text: '🎯 วันนี้พี่สาวแนะนำ' }),
+        h('div', { class: 'ms-steps' }, [h('span', { text: 'อ่าน ' + label + ' 20 นาที' }), h('span', { class: 'ar', text: '→' }), h('span', { text: 'ทำโจทย์ 5 ข้อ' }), h('span', { class: 'ar', text: '→' }), h('span', { text: 'ทบทวนพรุ่งนี้' })]),
+        h('p', { class: 'muted', text: 'ทำไมเรื่องนี้: ' + label + ' ' + pick.p + '% จาก ' + pick.k + ' ข้อ' + (firm ? ' (ข้อมูลพอเชื่อถือได้ ต่ำสุดในวิชานี้)' : ' (ข้อมูลยังน้อย ลองทำเพิ่มจะได้ตัวเลขที่แม่นขึ้น)') + (low ? ' ส่วน ' + low.n + ' ' + low.p + '% มีแค่ ' + low.k + ' ข้อ ยังไม่แน่ใจ ถ้ามีเวลาลองทำเรื่องนี้ 3–4 ข้อให้ได้ข้อมูลเพิ่ม' : '') }),
+        h('div', { class: 'row' }, [
+          h('button', { class: 'textbtn strong', type: 'button', text: 'ใส่ลงแพลนเนอร์ (3 รายการ)', onclick: function () { addMasteryPlan(pick); } }),
+          h('button', { class: 'textbtn', type: 'button', text: 'ทำโจทย์เรื่องนี้เลย (ใช้ AI)', onclick: function () { runAction('quiz', { count: 5, level: 'exam', topic: pick.n + (pick.n !== pick.top ? ' (หัวข้อ ' + pick.top + ')' : '') }); } }),
+          h('button', { class: 'textbtn', type: 'button', text: 'ให้พี่สาววางแผนต่อ (ใช้ AI)', onclick: function () { goPlanChat('ดูจาก Mastery ของหนู วิชา' + SUBJECT_LABEL[msSel] + 'เรื่อง ' + label + ' ยังอ่อนอยู่ ช่วยวางแผนอ่านและทำโจทย์ 3 วันข้างหน้าให้หน่อย '); } })
+        ])
+      ]);
+      root.appendChild(card);
+    } else if (tops.length) root.appendChild(h('div', { class: 'ms-today' }, [h('h3', { text: '🎯 วันนี้พี่สาวแนะนำ' }), h('p', { class: 'muted', text: 'ยังไม่มีข้อมูลพอ ทำแนวข้อสอบของวิชานี้สักชุด แล้วกลับมาดู พี่สาวจะบอกว่าควรเริ่มที่หัวข้อไหน' }), h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ไปที่เครื่องมือช่วยเรียน', onclick: function () { openTools(); } })])]));
+    // where the topics come from
+    var gen = h('button', { class: 'textbtn', type: 'button', text: skel ? 'ร่างโครงหัวข้อใหม่ (ใช้ AI)' : 'ให้พี่สาวร่างโครงหัวข้อ (ใช้ AI 1 ครั้ง)' });
+    gen.addEventListener('click', function () { if (skel && !confirm('ร่างโครงหัวข้อใหม่แทนอันเดิม หัวข้อที่เคยมีคะแนนจะยังอยู่ ตกลงไหม')) return; genSkeleton(msSel, gen); });
+    root.appendChild(h('div', { class: 'ms-note' }, [
+      h('b', { text: 'หัวข้อพวกนี้มาจากไหน' }),
+      h('p', { class: 'muted', text: 'หัวข้อที่เจอจากแนวข้อสอบและบัตรคำที่คุณทำ ขึ้นเองโดยไม่เสียโทเค็น ส่วนโครงหัวข้อตามหลักสูตร สสวท. (เช่น พันธุศาสตร์ › Mendel, DNA, Mutation) ให้พี่สาวร่างได้ครั้งเดียวต่อวิชา กดปุ่มด้านล่าง จะเห็นหัวข้อที่ยังไม่เคยทำด้วย ⚪ ยังไม่มีข้อมูล หมายถึงมีหัวข้อแต่ยังไม่เคยทำแบบฝึกหัด ไม่ได้แปลว่า 0%' + (skel ? ' · โครงหัวข้อร่างเมื่อ ' + fmtDate(skel.at) : '') }),
+      h('div', { class: 'row' }, [gen])
+    ]));
+  }
+
+  // ---------- Flashcard (its own page): decks, editing, import/export, cards made from my mistakes ----------
+  // A deck is just a path stored on each card ("ชีวะ › Genetics", at most 2 levels). Cards made before 3.2.0 have no path, so one is derived from subject + topic.
+  var fl = { sel: '', edit: null, tags: [], io: '', imp: null, ai: 0, aiRes: null, aiSel: {}, aiBusy: false, aiDeck: '', newDeck: false, arm: '' }, flTok = 0, flArmTimer = 0;
+  function normDecks(list) { return (Array.isArray(list) ? list : []).map(cleanDeck).filter(Boolean).filter(function (p, i, a) { return a.indexOf(p) === i; }).slice(0, 60); }
+  function cleanDeck(s) { return str(s).replace(/\s+/g, ' ').trim().split(/\s*[›>]\s*/).filter(Boolean).slice(0, 2).map(function (x) { return clip(x.trim(), 30); }).join(' › '); }
+  function cardDeck(c) { return c.deck || ((SUBJECT_LABEL[c.subject] || 'อื่นๆ') + ' › ' + (c.topic || 'ทั่วไป')); }
+  function cardTags(c) { return Array.isArray(c.tags) ? c.tags : (c.topic ? [c.topic] : []); }
+  function subjectOfDeck(p) { var r = p.split(' › ')[0], s = SUBJECTS.filter(function (x) { return x.label === r; })[0]; return s && s.id !== 'all' ? s.id : 'other'; }
+  function inDeck(c, sel) { if (!sel) return true; var p = cardDeck(c); return p === sel || p.indexOf(sel + ' › ') === 0; }
+  function deckMap(cards) {
+    var now = Date.now(), map = {};
+    var touch = function (k) { return map[k] || (map[k] = { n: 0, due: 0 }); };
+    state.flashDecks.forEach(function (p) { touch(p); touch(p.split(' › ')[0]); });
+    cards.forEach(function (c) {
+      var p = cardDeck(c), r = p.split(' › ')[0], due = (c.due || 0) <= now;
+      var a = touch(p); a.n++; if (due) a.due++;
+      if (r !== p) { var b = touch(r); b.n++; if (due) b.due++; }
+    });
+    return map;
+  }
+  function newCardRec(front, back, deck, tags) {
+    var d = cleanDeck(deck) || 'ทั่วไป', now = Date.now(), tg = (tags || []).map(function (t) { return clip(str(t).trim(), 30); }).filter(Boolean).slice(0, 8);
+    return { id: newId('c'), deckId: 'u', front: clip(front, 1500), back: clip(back, 3000), topic: tg[0] || '', subject: subjectOfDeck(d), tags: tg, deck: d, created: now, due: now, reps: 0, ease: 2.5, interval: 0 };
+  }
+  function flArm(key, run) { return function () { if (fl.arm !== key) { fl.arm = key; clearTimeout(flArmTimer); flArmTimer = setTimeout(function () { fl.arm = ''; renderFlash(); }, 3500); renderFlash(); return; } fl.arm = ''; run(); }; }
+  function downloadFile(name, text, type) {
+    var b = new Blob([text], { type: type + ';charset=utf-8' }), a = h('a', { href: URL.createObjectURL(b), download: name });
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  }
+  function stamp8() { var d = new Date(); return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); }
+  function exportCards(list, kind) {
+    var name = 'unnie-flashcards-' + stamp8(), out;
+    if (kind === 'json') { out = JSON.stringify({ app: 'unnie-study', version: 1, cards: list.map(function (c) { return { deck: cardDeck(c), front: c.front, back: c.back, tags: cardTags(c), due: c.due || 0, interval: c.interval || 0, reps: c.reps || 0, ease: c.ease || 2.5 }; }) }, null, 1); return { name: name + '.json', text: out, type: 'application/json' }; }
+    var q = function (s) { return '"' + str(s).replace(/"/g, '""') + '"'; };
+    if (kind === 'csv') { out = '﻿deck,front,back,tags\n' + list.map(function (c) { return [cardDeck(c), c.front, c.back, cardTags(c).join(' ')].map(q).join(','); }).join('\n'); return { name: name + '.csv', text: out, type: 'text/csv' }; }
+    // Anki: tab-separated text file (File > Import). Line breaks become <br>, $...$ becomes Anki's \( \) maths.
+    var cell = function (s) {
+      return str(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\t/g, ' ').replace(/\r?\n/g, '<br>')
+        .replace(/\$\$([^$]+)\$\$/g, '\\[$1\\]').replace(/\$([^$\n]+)\$/g, '\\($1\\)');
+    };
+    out = '#separator:tab\n#html:true\n#tags column:3\n#deck column:4\n' + list.map(function (c) { return [cell(c.front), cell(c.back), cardTags(c).map(function (t) { return t.replace(/\s+/g, '_'); }).join(' '), cardDeck(c).replace(/ › /g, '::')].join('\t'); }).join('\n');
+    return { name: name + '.txt', text: out, type: 'text/plain' };
+  }
+  function parseCSV(text) {
+    var delim = (text.split('\n')[0].match(/\t/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? '\t' : (text.split('\n')[0].match(/;/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+    var rows = [], row = [], cur = '', inq = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (inq) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inq = false; } else cur += ch; }
+      else if (ch === '"') inq = true;
+      else if (ch === delim) { row.push(cur); cur = ''; }
+      else if (ch === '\n') { row.push(cur.replace(/\r$/, '')); rows.push(row); row = []; cur = ''; }
+      else cur += ch;
+    }
+    if (cur || row.length) { row.push(cur.replace(/\r$/, '')); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return x.trim(); }); });
+  }
+  function fromHtml(s) {
+    return str(s).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+      .replace(/\\\[([\s\S]+?)\\\]/g, '$$$$$1$$$$').replace(/\\\(([\s\S]+?)\\\)/g, '$$$1$$').trim();
+  }
+  function parseCards(text, fname) {
+    text = text.replace(/^﻿/, ''); var t = text.trim(), out = [], fmt = '';
+    var tg = function (v) { return (Array.isArray(v) ? v : str(v).split(/[\s,;]+/)).map(function (x) { return str(x).trim().replace(/_/g, ' '); }).filter(Boolean); };
+    if (t[0] === '{' || t[0] === '[') {
+      var d = JSON.parse(t), arr = Array.isArray(d) ? d : (d.cards || []); fmt = 'JSON';
+      arr.forEach(function (c) { var f = str(c.front || c.question || c.q).trim(), b = str(c.back || c.answer || c.a).trim(); if (f && b) out.push({ front: f, back: b, tags: tg(c.tags), deck: str(c.deck), due: +c.due || 0, interval: +c.interval || 0, reps: +c.reps || 0, ease: +c.ease || 0 }); });
+    } else if (t.indexOf('#separator') === 0 || /^#(html|tags column|deck column)/m.test(t)) {
+      fmt = 'Anki (ข้อความ)'; var tc = 0, dcol = 0, isHtml = /^#html:true/m.test(t);
+      var m1 = /^#tags column:(\d+)/m.exec(t); if (m1) tc = +m1[1]; var m2 = /^#deck column:(\d+)/m.exec(t); if (m2) dcol = +m2[1];
+      t.split('\n').forEach(function (line) {
+        line = line.replace(/\r$/, ''); if (!line || line[0] === '#') return;
+        var p = line.split('\t'), f = isHtml ? fromHtml(p[0]) : str(p[0]).trim(), b = isHtml ? fromHtml(p[1]) : str(p[1]).trim();
+        if (f && b) out.push({ front: f, back: b, tags: tc ? tg(p[tc - 1]) : [], deck: dcol ? str(p[dcol - 1]).replace(/::/g, ' › ') : '', due: 0, interval: 0, reps: 0, ease: 0 });
+      });
+    } else {
+      fmt = 'CSV'; var rows = parseCSV(t), head = rows[0].map(function (x) { return x.trim().toLowerCase(); });
+      var hasHead = head.some(function (x) { return /^(front|question|คำถาม|back|answer|คำตอบ)$/.test(x); }), ci = { f: 0, b: 1, t: 2, d: 3 };
+      if (hasHead) { ci = { f: -1, b: -1, t: -1, d: -1 }; head.forEach(function (x, i) { if (/^(front|question|คำถาม)$/.test(x)) ci.f = i; else if (/^(back|answer|คำตอบ)$/.test(x)) ci.b = i; else if (/^(tags?|แท็ก)$/.test(x)) ci.t = i; else if (/^(deck|ชุด)$/.test(x)) ci.d = i; }); rows = rows.slice(1); }
+      rows.forEach(function (r) { var f = str(r[ci.f]).trim(), b = str(r[ci.b]).trim(); if (f && b) out.push({ front: f, back: b, tags: ci.t >= 0 ? tg(r[ci.t]) : [], deck: ci.d >= 0 ? str(r[ci.d]) : '', due: 0, interval: 0, reps: 0, ease: 0 }); });
+    }
+    return { fmt: fmt, cards: out.slice(0, 2000), total: out.length };
+  }
+  async function flashFromErrors() {
+    if (fl.aiBusy) return;
+    if (!S.apiKey) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    var picks = state.errbook.filter(function (x) { return x.status === 'open' && fl.aiSel[x.id]; }).slice(0, 20);
+    if (!picks.length) { showToast('เลือกข้อที่ผิดอย่างน้อย 1 ข้อ'); return; }
+    fl.aiBusy = true; renderFlash();
+    try {
+      var schema = { type: 'object', properties: { concepts: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, why: { type: 'string' } }, required: ['name', 'why'] } },
+        cards: { type: 'array', items: { type: 'object', properties: { front: { type: 'string' }, back: { type: 'string' }, topic: { type: 'string' }, subject: { type: 'string', enum: ['math', 'physics', 'chem', 'bio', 'python', 'english', 'other'] }, concept: { type: 'string' } }, required: ['front', 'back', 'topic', 'subject', 'concept'] } } }, required: ['concepts', 'cards'] };
+      var lines = picks.map(function (x, i) { return (i + 1) + '. [' + (SUBJECT_LABEL[x.subject] || '') + ' / ' + (x.topic || '-') + (x.sub ? ' > ' + x.sub : '') + '] Q: ' + clip(x.q, 260) + ' | student answered: ' + clip(x.mine, 100) + ' | correct: ' + clip(x.right, 120) + (x.why ? ' | likely reason: ' + clip(x.why, 140) : ''); });
+      var prompt = 'Below are questions a Thai student got wrong. (1) Find the 2 to 4 core concepts that explain most of the mistakes (concept name in Thai, and one short Thai sentence on why the student mixes it up). (2) Write 5 flashcards (at most 8) that target exactly those concepts: front = a short question or prompt, back = a concise answer with a brief memory hook. Do not copy the original questions; test the underlying concept. Write in Thai (technical terms may stay in English); use $...$ LaTeX for math and \\ce{} for chemistry. Each card has topic (broad topic in Thai), subject, and concept (which concept above it belongs to).\n\n' + lines.join('\n');
+      var acc = await gemini({ system: 'You are a careful tutor for Thai high-school students. Answer only with the JSON requested.', code: false, search: false, thinking: 'low', noChat: true, label: 'บัตรคำจากข้อที่ผิด', schema: schema,
+        buildContents: async function () { return [{ role: 'user', parts: [{ text: prompt }] }]; } });
+      checkFinish(acc);
+      var raw = acc.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''), d;
+      try { d = JSON.parse(raw); } catch (e2) { var a0 = raw.indexOf('{'), b0 = raw.lastIndexOf('}'); d = JSON.parse(raw.slice(a0, b0 + 1)); }
+      var cards = (d.cards || []).filter(function (c) { return c && str(c.front).trim() && str(c.back).trim(); }).slice(0, 8).map(function (c) { return { front: fixLatex(str(c.front)), back: fixLatex(str(c.back)), topic: clip(c.topic, 40), subject: SUBJECT_LABEL[c.subject] ? c.subject : 'other', concept: clip(c.concept, 60) }; });
+      if (!cards.length) throw apiError('invalid_json');
+      var cnt = {}; picks.forEach(function (x) { var k = (SUBJECT_LABEL[x.subject] || 'อื่นๆ') + ' › ' + (x.topic || 'ทั่วไป'); cnt[k] = (cnt[k] || 0) + 1; });
+      fl.aiDeck = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; })[0] || 'ทั่วไป';
+      fl.aiRes = { concepts: (d.concepts || []).slice(0, 4).map(function (c) { return { name: clip(c.name, 80), why: clip(c.why, 160) }; }), cards: cards, n: picks.length };
+      fl.aiSel = {}; cards.forEach(function (c, i) { fl.aiSel['c' + i] = true; });
+      fl.ai = 2;
+    } catch (e) { showToast(errorCopy(e)); }
+    fl.aiBusy = false; renderFlash();
+  }
+  async function renderFlash() {
+    var root = $('flash-root'); if (!root) return;
+    var tok = ++flTok;
+    if (reviewSession) { root.innerHTML = ''; renderReviewStage(root); return; }
+    var cards = await DB.all('cards').catch(function () { return []; });
+    if (tok !== flTok) return;
+    root.innerHTML = '';
+    var now = Date.now(), map = deckMap(cards), scope = cards.filter(function (c) { return inDeck(c, fl.sel); });
+    var due = scope.filter(function (c) { return (c.due || 0) <= now; }).sort(function (a, b) { return (a.due || 0) - (b.due || 0); });
+    var label = fl.sel || 'ทุกชุด';
+    root.appendChild(h('h1', { class: 'page-title', text: 'Flashcard' }));
+    root.appendChild(h('p', { class: 'page-lead', text: 'บัตรคำทั้งหมดอยู่ที่นี่ ทั้งที่พี่สาวทำให้และที่คุณสร้างหรือแก้เอง ทบทวนตามจังหวะความจำ ใบที่จำได้แล้วจะเว้นนานขึ้น ใบที่ยังจำไม่ได้จะกลับมาเร็ว' }));
+    var next = scope.filter(function (c) { return (c.due || 0) > now; }).sort(function (a, b) { return a.due - b.due; })[0];
+    root.appendChild(h('div', { class: 'fl-due' }, [
+      h('div', null, [h('span', { class: 'fl-big', text: String(due.length) }), ' ใบที่ต้องทบทวน', h('div', { class: 'muted', text: label + (due.length || !scope.length ? '' : ' · ใบถัดไปในอีก ' + (next ? fmtInterval(next.due - now) : '–')) })]),
+      due.length ? h('button', { class: 'primary', type: 'button', text: 'เริ่มทบทวน', onclick: function () { startReview(due.slice(0, 60)); } }) : null
+    ]));
+    // tools
+    var tbtn = function (text, fn) { return h('button', { class: 'textbtn', type: 'button', text: text, onclick: fn }); };
+    root.appendChild(h('div', { class: 'row fl-tools' }, [
+      tbtn('+ บัตรใหม่', function () { fl.edit = { id: '' }; fl.tags = []; fl.io = ''; renderFlash(); }),
+      tbtn('⬆ Import', function () { fl.io = fl.io === 'import' ? '' : 'import'; fl.imp = null; fl.edit = null; renderFlash(); }),
+      tbtn('⬇ Export', function () { fl.io = fl.io === 'export' ? '' : 'export'; fl.edit = null; renderFlash(); }),
+      tbtn('📄 ให้พี่สาวทำจากไฟล์/หัวข้อ (ใช้ AI)', function () { openTools(); })
+    ]));
+    // cards made from my mistakes
+    var ai = h('div', { class: 'fl-ai' }, [h('h3', { text: '✨ สร้างบัตรจาก "ข้อที่ผิด"' }), h('p', { class: 'muted', text: 'ไม่ต้องมีไฟล์ พี่สาวดูข้อที่คุณทำพลาดในสมุดข้อผิด หา concept ที่เป็นต้นเหตุร่วมกัน แล้วสร้างบัตรคำสั้นๆ เฉพาะจุดนั้น (ใช้ AI 1 ครั้ง)' })]);
+    var openErr = state.errbook.filter(function (x) { return x.status === 'open'; }).slice(0, 20);
+    if (fl.aiBusy) ai.appendChild(h('p', { text: 'พี่สาวกำลังหา concept และร่างบัตร…' }));
+    else if (fl.ai === 0) ai.appendChild(openErr.length ? h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'เลือกข้อที่ผิด (' + openErr.length + ' ข้อพร้อมใช้)', onclick: function () { fl.ai = 1; fl.aiSel = {}; openErr.slice(0, 7).forEach(function (x) { fl.aiSel[x.id] = true; }); renderFlash(); } })]) : h('p', { class: 'muted', text: 'ยังไม่มีข้อผิดในสมุด ทำแนวข้อสอบก่อน ข้อที่พลาดจะมาอยู่ที่นี่เอง' }));
+    else if (fl.ai === 1) {
+      var wl = h('div', { class: 'fl-wl' });
+      openErr.forEach(function (x) { var cb = h('input', { type: 'checkbox' }); cb.checked = !!fl.aiSel[x.id]; cb.addEventListener('change', function () { fl.aiSel[x.id] = cb.checked; }); wl.appendChild(h('label', null, [cb, h('span', null, [h('b', { text: (x.topic || '-') + (x.sub ? ' › ' + x.sub : '') + ' ' }), clip(x.q.replace(/\$/g, ''), 110)])])); });
+      ai.appendChild(wl);
+      ai.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ให้พี่สาววิเคราะห์ (ใช้ AI 1 ครั้ง)', onclick: flashFromErrors }), h('button', { class: 'textbtn', type: 'button', text: 'ยกเลิก', onclick: function () { fl.ai = 0; renderFlash(); } })]));
+    } else if (fl.ai === 2 && fl.aiRes) {
+      ai.appendChild(h('p', { class: 'muted', text: 'พบ concept กลาง ' + fl.aiRes.concepts.length + ' เรื่อง จากข้อที่ผิด ' + fl.aiRes.n + ' ข้อ:' }));
+      fl.aiRes.concepts.forEach(function (c) { ai.appendChild(h('div', { class: 'fl-cg' }, [h('b', { text: c.name }), c.why])); });
+      ai.appendChild(h('p', { class: 'muted', text: 'บัตรที่พี่สาวร่างให้ ' + fl.aiRes.cards.length + ' ใบ (ติ๊กใบที่เอา):' }));
+      var gl = h('div', { class: 'fl-wl' });
+      fl.aiRes.cards.forEach(function (c, i) { var cb = h('input', { type: 'checkbox' }); cb.checked = !!fl.aiSel['c' + i]; cb.addEventListener('change', function () { fl.aiSel['c' + i] = cb.checked; }); gl.appendChild(h('label', null, [cb, h('span', null, [h('b', { text: c.front.replace(/\$/g, '') }), h('br'), h('small', { class: 'muted', text: c.back.replace(/\$/g, '') }), h('br'), h('span', { class: 'fl-tg', text: c.concept })])])); });
+      ai.appendChild(gl);
+      var dk = h('input', { class: 'text', type: 'text', list: 'fl-decks', value: fl.aiDeck, 'aria-label': 'ชุดปลายทาง', placeholder: 'ชุดปลายทาง เช่น ชีวะ › Genetics' });
+      dk.addEventListener('input', function () { fl.aiDeck = dk.value; });
+      ai.appendChild(h('div', { class: 'field' }, [h('label', { text: 'เพิ่มเข้าชุด' }), dk]));
+      ai.appendChild(h('div', { class: 'row' }, [
+        h('button', { class: 'textbtn strong', type: 'button', text: 'เพิ่มบัตรที่เลือกเข้าชุด', onclick: async function () {
+          var list = fl.aiRes.cards.filter(function (c, i) { return fl.aiSel['c' + i]; });
+          if (!list.length) { showToast('ติ๊กอย่างน้อย 1 ใบ'); return; }
+          var recs = list.map(function (c) { var r = newCardRec(c.front, c.back, fl.aiDeck, [c.concept, 'จากข้อผิด']); r.subject = c.subject; r.topic = c.topic || r.topic; return r; });
+          await DB.putMany('cards', recs).catch(function () {}); refreshDue(); fl.ai = 3; fl.sel = cleanDeck(fl.aiDeck); renderFlash();
+        } }),
+        h('button', { class: 'textbtn', type: 'button', text: 'ยกเลิก', onclick: function () { fl.ai = 0; fl.aiRes = null; renderFlash(); } })
+      ]));
+    } else if (fl.ai === 3) ai.appendChild(h('div', null, [h('p', { text: 'เพิ่มบัตรแล้ว กำหนดทบทวนวันนี้ เริ่มทบทวนได้เลย' }), h('div', { class: 'row' }, [h('button', { class: 'textbtn', type: 'button', text: 'ทำรอบใหม่', onclick: function () { fl.ai = 0; fl.aiRes = null; renderFlash(); } })])]));
+    root.appendChild(ai);
+    var dl = h('datalist', { id: 'fl-decks' }, Object.keys(map).map(function (k) { return h('option', { value: k }); })); root.appendChild(dl);
+    // export / import
+    if (fl.io === 'export') {
+      var ex = h('div', { class: 'fl-form' }, [h('b', { text: 'Export ' + scope.length + ' ใบ (' + label + ')' })]);
+      var pre = h('pre', { text: 'เลือกรูปแบบด้านล่างเพื่อบันทึกไฟล์ (ตัวอย่างไฟล์จะแสดงที่นี่)' });
+      [['json', 'JSON (สำรองทั้งหมด รวมกำหนดทบทวน)'], ['csv', 'CSV (เปิดใน Excel ได้)'], ['anki', 'Anki (ไฟล์ข้อความคั่นด้วยแท็บ)']].forEach(function (k) {
+        ex.appendChild(h('button', { class: 'textbtn', type: 'button', style: 'margin:4px 6px 0 0', text: k[1], onclick: function () { if (!scope.length) { showToast('ไม่มีบัตรให้ส่งออก'); return; } var o = exportCards(scope, k[0]); pre.textContent = o.text.split('\n').slice(0, 10).join('\n'); downloadFile(o.name, o.text, o.type); showToast('บันทึกไฟล์ ' + o.name); } }));
+      });
+      ex.appendChild(pre);
+      ex.appendChild(h('p', { class: 'muted', text: 'Anki: ในโปรแกรม Anki ใช้ File › Import เลือกไฟล์ .txt นี้ (ฟิลด์ 1 = คำถาม, 2 = คำตอบ, แท็กและชุดมากับไฟล์) · ยังไม่รองรับไฟล์ .apkg · สูตรที่เขียนด้วย $...$ จะถูกแปลงเป็นรูปแบบของ Anki' }));
+      root.appendChild(ex);
+    }
+    if (fl.io === 'import') {
+      var im = h('div', { class: 'fl-form' }, [h('b', { text: 'Import บัตรคำ' }), h('p', { class: 'muted', text: 'รองรับไฟล์ JSON ของแอปนี้ CSV (คอลัมน์ deck, front/question, back/answer, tags) และไฟล์ข้อความคั่นด้วยแท็บจาก Anki ตรวจตัวอย่างก่อนบันทึกทุกครั้ง' })]);
+      var fi = h('input', { type: 'file', accept: '.json,.csv,.txt,.tsv' });
+      fi.addEventListener('change', async function () {
+        var file = fi.files && fi.files[0]; if (!file) return;
+        if (file.size > 5 * 1048576) { showToast('ไฟล์ใหญ่เกิน 5 MB'); return; }
+        try { fl.imp = parseCards(await file.text(), file.name); fl.imp.name = file.name; if (!fl.imp.cards.length) { fl.imp = null; showToast('ไม่พบบัตรคำในไฟล์นี้ (ต้องมีทั้งคำถามและคำตอบ)'); } }
+        catch (e) { fl.imp = null; showToast('อ่านไฟล์นี้ไม่ได้ ตรวจรูปแบบไฟล์อีกครั้ง'); }
+        renderFlash();
+      });
+      im.appendChild(fi);
+      if (fl.imp) {
+        var tgt = h('input', { class: 'text', type: 'text', list: 'fl-decks', value: fl.impDeck || ('นำเข้า › ' + stamp8()), 'aria-label': 'ชุดปลายทางสำหรับบัตรที่ไม่มีชุด' });
+        tgt.addEventListener('input', function () { fl.impDeck = tgt.value; });
+        im.appendChild(h('p', null, ['พบ ', h('b', { text: String(fl.imp.cards.length) + ' ใบ' }), ' (' + fl.imp.fmt + ') จาก ' + fl.imp.name + (fl.imp.total > fl.imp.cards.length ? ' · นำเข้าได้สูงสุด 2,000 ใบ' : '')]));
+        fl.imp.cards.slice(0, 3).forEach(function (c) { im.appendChild(h('div', { class: 'fl-cg' }, [h('b', { text: clip(c.front, 90) }), clip(c.back, 110) + (c.deck ? '  · ' + c.deck : '')])); });
+        im.appendChild(h('div', { class: 'field' }, [h('label', { text: 'ชุดปลายทาง (ใช้กับบัตรที่ไฟล์ไม่ได้ระบุชุด)' }), tgt]));
+        im.appendChild(h('div', { class: 'row' }, [
+          h('button', { class: 'textbtn strong', type: 'button', text: 'นำเข้า ' + fl.imp.cards.length + ' ใบ', onclick: async function () {
+            var have = {}; cards.forEach(function (c) { have[cardDeck(c) + '|' + c.front + '|' + c.back] = 1; });
+            var recs = [], skip = 0;
+            fl.imp.cards.forEach(function (c) {
+              var r = newCardRec(c.front, c.back, c.deck || tgt.value || 'นำเข้า', c.tags), k = r.deck + '|' + r.front + '|' + r.back;
+              if (have[k]) { skip++; return; } have[k] = 1;
+              if (c.interval) { r.interval = c.interval; r.reps = c.reps; r.ease = c.ease || 2.5; r.due = c.due || r.due; r.last = Date.now(); }
+              recs.push(r);
+            });
+            await DB.putMany('cards', recs).catch(function () { showToast('เก็บบัตรไม่สำเร็จ พื้นที่ในเครื่องอาจเต็ม'); });
+            fl.imp = null; fl.io = ''; refreshDue(); showToast('นำเข้า ' + recs.length + ' ใบแล้ว' + (skip ? ' (ข้ามที่ซ้ำ ' + skip + ' ใบ)' : '')); renderFlash();
+          } }),
+          h('button', { class: 'textbtn', type: 'button', text: 'ยกเลิก', onclick: function () { fl.imp = null; renderFlash(); } })
+        ]));
+      }
+      root.appendChild(im);
+    }
+    // edit / new card
+    if (fl.edit) {
+      var cur = fl.edit.id ? cards.filter(function (x) { return x.id === fl.edit.id; })[0] : null;
+      var q = h('textarea', { class: 'text', rows: '3', 'aria-label': 'คำถาม' }), a = h('textarea', { class: 'text', rows: '3', 'aria-label': 'คำตอบ' });
+      q.value = fl.edit.q !== undefined ? fl.edit.q : (cur ? cur.front : ''); a.value = fl.edit.a !== undefined ? fl.edit.a : (cur ? cur.back : '');
+      var dk2 = h('input', { class: 'text', type: 'text', list: 'fl-decks', 'aria-label': 'ชุด', placeholder: 'เช่น ชีวะ › Genetics' });
+      dk2.value = fl.edit.deck !== undefined ? fl.edit.deck : (cur ? cardDeck(cur) : (fl.sel || ''));
+      var tagBox = h('div', { class: 'fl-tagbox' }), ti = h('input', { type: 'text', placeholder: 'พิมพ์แท็กแล้วกด Enter', 'aria-label': 'เพิ่มแท็ก' });
+      var drawTags = function () { tagBox.innerHTML = ''; fl.tags.forEach(function (t, i) { tagBox.appendChild(h('span', { class: 'fl-tg' }, [t, h('button', { type: 'button', 'aria-label': 'เอาแท็ก ' + t + ' ออก', text: '×', onclick: function () { fl.tags.splice(i, 1); drawTags(); } })])); }); tagBox.appendChild(ti); };
+      if (cur && fl.edit.tagsInit !== true) { fl.tags = cardTags(cur).slice(); fl.edit.tagsInit = true; }
+      var addTag = function () { var v = clip(ti.value.trim().replace(/,$/, ''), 30); if (v && fl.tags.indexOf(v) < 0 && fl.tags.length < 8) fl.tags.push(v); ti.value = ''; drawTags(); ti.focus(); };
+      ti.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); } });
+      drawTags();
+      root.appendChild(h('div', { class: 'fl-form' }, [
+        h('b', { text: cur ? 'แก้บัตร' : 'บัตรใหม่' }),
+        h('div', { class: 'field' }, [h('label', { text: 'คำถาม' }), q]),
+        h('div', { class: 'field' }, [h('label', { text: 'คำตอบ' }), a]),
+        h('div', { class: 'field' }, [h('label', { text: 'แท็ก' }), tagBox]),
+        h('div', { class: 'field' }, [h('label', { text: 'ชุด (วิชา › ชุดย่อย)' }), dk2]),
+        h('p', { class: 'muted', text: 'เขียนสูตรได้ด้วย $...$ เช่น $E = mc^2$' }),
+        h('div', { class: 'row' }, [
+          h('button', { class: 'textbtn strong', type: 'button', text: 'บันทึก', onclick: async function () {
+            if (ti.value.trim()) addTag();
+            var fq = q.value.trim(), fa = a.value.trim();
+            if (!fq || !fa) { showToast('ใส่ทั้งคำถามและคำตอบก่อน'); return; }
+            var d = cleanDeck(dk2.value) || 'ทั่วไป';
+            if (cur) { cur.front = clip(fq, 1500); cur.back = clip(fa, 3000); cur.tags = fl.tags.slice(); cur.topic = fl.tags[0] || ''; cur.deck = d; cur.subject = subjectOfDeck(d); await DB.put('cards', cur).catch(function () {}); }
+            else { await DB.put('cards', newCardRec(fq, fa, d, fl.tags)).catch(function () {}); }
+            fl.edit = null; refreshDue(); showToast('บันทึกบัตรแล้ว'); renderFlash();
+          } }),
+          h('button', { class: 'textbtn', type: 'button', text: 'ยกเลิก', onclick: function () { fl.edit = null; renderFlash(); } })
+        ])
+      ]));
+    }
+    // decks + cards
+    var grid = h('div', { class: 'fl-grid' }), decks = h('div', { class: 'fl-decks' });
+    var dk = function (key, text, cls) { var m = map[key] || { n: 0, due: 0 }; return h('button', { class: 'fl-dk' + (cls ? ' ' + cls : '') + (fl.sel === key ? ' on' : ''), type: 'button', onclick: function () { fl.sel = key; renderFlash(); } }, [text, m.due ? h('span', { class: 'fl-dueb', text: String(m.due) }) : null, h('small', { text: m.n + ' ใบ' })]); };
+    decks.appendChild(h('button', { class: 'fl-dk' + (fl.sel === '' ? ' on' : ''), type: 'button', onclick: function () { fl.sel = ''; renderFlash(); } }, ['ทุกชุด', h('small', { text: cards.length + ' ใบ' })]));
+    var roots = Object.keys(map).filter(function (k) { return k.indexOf(' › ') < 0; }).sort();
+    roots.forEach(function (r) { decks.appendChild(dk(r, '📁 ' + r)); Object.keys(map).filter(function (k) { return k.indexOf(r + ' › ') === 0; }).sort().forEach(function (k) { decks.appendChild(dk(k, k.slice(r.length + 3), 'k')); }); });
+    if (fl.newDeck) {
+      var nd = h('input', { class: 'text', type: 'text', placeholder: 'เช่น ชีวะ › Evolution', 'aria-label': 'ชื่อชุดใหม่' });
+      var addDeck = function () { var p = cleanDeck(nd.value); if (!p) return; if (state.flashDecks.indexOf(p) < 0) { state.flashDecks.push(p); kvSet('flashdecks', state.flashDecks); } fl.sel = p; fl.newDeck = false; renderFlash(); };
+      nd.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addDeck(); } });
+      decks.appendChild(h('div', { class: 'row', style: 'padding:6px' }, [nd, h('button', { class: 'textbtn strong', type: 'button', text: 'สร้าง', onclick: addDeck })]));
+      setTimeout(function () { nd.focus(); }, 0);
+    } else decks.appendChild(h('div', { class: 'row', style: 'padding:6px' }, [h('button', { class: 'mini', type: 'button', text: '+ ชุดใหม่', onclick: function () { fl.newDeck = true; renderFlash(); } })]));
+    grid.appendChild(decks);
+    var right = h('div', { class: 'fl-list' }, [h('div', { class: 'row', style: 'justify-content:space-between;margin:0 0 4px' }, [h('span', { class: 'muted', text: label + ' · ' + scope.length + ' ใบ' }),
+      fl.sel ? h('button', { class: 'del' + (fl.arm === 'deck' ? ' confirm' : ''), type: 'button', text: fl.arm === 'deck' ? 'ยืนยันลบชุดนี้และบัตรทั้งหมด' : 'ลบชุดนี้', onclick: flArm('deck', async function () {
+        for (var i = 0; i < scope.length; i++) await DB.del('cards', scope[i].id).catch(function () {});
+        state.flashDecks = state.flashDecks.filter(function (p) { return p !== fl.sel && p.indexOf(fl.sel + ' › ') !== 0; }); kvSet('flashdecks', state.flashDecks);
+        fl.sel = ''; refreshDue(); renderFlash();
+      }) }) : null])]);
+    if (!scope.length) right.appendChild(h('p', { class: 'muted', text: cards.length ? 'ยังไม่มีบัตรในชุดนี้ กด "+ บัตรใหม่" เพื่อเพิ่ม' : 'ยังไม่มีบัตรคำ กด "+ บัตรใหม่" หรือให้พี่สาวทำบัตรให้จากไฟล์ หัวข้อ หรือข้อที่ผิด' }));
+    scope.slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); }).slice(0, 100).forEach(function (c) {
+      var isDue = (c.due || 0) <= now;
+      right.appendChild(h('div', { class: 'fl-card' }, [
+        h('div', { class: 'fl-ct' }, [h('b', { text: clip(c.front.replace(/\$/g, ''), 140) }), h('small', { text: clip(c.back.replace(/\$/g, ''), 160) }),
+          h('div', null, cardTags(c).map(function (t) { return h('span', { class: 'fl-tg', text: t }); }).concat([h('span', { class: 'fl-tg d', text: cardDeck(c) }), isDue ? h('span', { class: 'fl-tg due', text: 'ครบกำหนด' }) : null]))]),
+        h('button', { class: 'fl-ic', type: 'button', 'aria-label': 'แก้บัตร', text: '✎', onclick: function () { fl.edit = { id: c.id }; fl.io = ''; renderFlash(); window.scrollTo && 0; } }),
+        h('button', { class: 'fl-ic' + (fl.arm === 'c:' + c.id ? ' danger' : ''), type: 'button', 'aria-label': 'ลบบัตร', text: fl.arm === 'c:' + c.id ? 'ยืนยัน' : '×', onclick: flArm('c:' + c.id, async function () { await DB.del('cards', c.id).catch(function () {}); refreshDue(); renderFlash(); }) })
+      ]));
+    });
+    if (scope.length > 100) right.appendChild(h('p', { class: 'muted', text: 'แสดง 100 ใบล่าสุดจาก ' + scope.length + ' ใบ เลือกชุดย่อยเพื่อดูที่เหลือ' }));
+    grid.appendChild(right); root.appendChild(grid);
+  }
+
+  // ---------- Knowledge Map ----------
+  // The same topics and percentages as Mastery, drawn as a map you can scroll and zoom (both directions). Dashed lines = related topics (made once per subject by พี่สาว, optional).
+  var kmS = '', kmSel = '', kmScale = 0, kmOpen = {}, kmBusy = false, kmArm = '', kmArmTimer = 0, kmTok = 0;
+  function kmTrim(s) { s = str(s); return s.length > 13 ? s.slice(0, 12) + '…' : s; }
+  async function kmFlashDeck(top, kid) {
+    var cards = await DB.all('cards').catch(function () { return []; }), root = SUBJECT_LABEL[kmS] || '', best = '';
+    cards.forEach(function (c) { var p = cardDeck(c); if (p.split(' › ')[0] !== root || best) return; var sub = p.split(' › ')[1] || ''; if ((kid && nameMatch(sub, kid)) || (!kid && nameMatch(sub, top))) best = p; });
+    if (!best) cards.forEach(function (c) { var p = cardDeck(c); if (!best && p.split(' › ')[0] === root && nameMatch(p.split(' › ')[1] || '', top)) best = p; });
+    return best || root;
+  }
+  async function renderKmap() {
+    var root = $('kmap-root'); if (!root) return;
+    var tok = ++kmTok;
+    if (!kmS) kmS = (MS_SUBJ.indexOf(msSel) >= 0 && msSel) || 'bio';
+    var ev = await masteryEvidence();
+    if (tok !== kmTok) return;
+    root.innerHTML = '';
+    root.appendChild(h('h1', { class: 'page-title', text: 'Knowledge Map' }));
+    root.appendChild(h('p', { class: 'page-lead', text: 'แผนที่ความรู้ของตัวเอง แต่ละกล่องคือหัวข้อ สีและตัวเลขคือความแม่นยำ เส้นประคือหัวข้อที่เกี่ยวข้องกัน กดกล่องเพื่อ เรียน / ทำข้อสอบ / Flashcard กดหัวข้อใหญ่ซ้ำเพื่อย่อหรือขยาย' }));
+    root.appendChild(h('div', { class: 'subjects nb-chips', role: 'group', 'aria-label': 'เลือกวิชา' }, MS_SUBJ.map(function (s) {
+      return h('button', { class: 'chip', type: 'button', 'aria-pressed': kmS === s ? 'true' : 'false', text: SUBJECT_LABEL[s], onclick: function () { kmS = s; kmSel = ''; kmScale = 0; renderKmap(); } });
+    })));
+    var tops = msBuild(ev, kmS);
+    if (!tops.length) {
+      root.appendChild(h('div', { class: 'card-like' }, [h('p', { text: 'ยังไม่มีหัวข้อของวิชานี้' }), h('p', { class: 'muted', text: 'ทำแนวข้อสอบหรือบัตรคำของวิชานี้ หัวข้อจะขึ้นเอง หรือให้พี่สาวร่างโครงหัวข้อก่อนที่หน้า Mastery' }), h('div', { class: 'row' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ไปที่ Mastery', onclick: function () { msSel = kmS; showView('mastery'); } })])]));
+      return;
+    }
+    // tree with ids; a top node opens when it has practised sub-topics (or when there are only a few topics)
+    var all = [], rootN = { id: 'r', n: SUBJECT_LABEL[kmS], kind: 'root', d: 0, kids: [] }, sw = 0, sv = 0, kk = 0, mt = 0;
+    tops.forEach(function (t, i) {
+      var id = 't' + i, hasKids = t.kids.length > 0, open = hasKids && (kmOpen[kmS + id] !== undefined ? kmOpen[kmS + id] : (t.kids.some(function (k) { return k.k; }) || tops.length <= 5));
+      var tn = { id: id, n: t.n, p: t.p, k: t.k, mt: t.mt, kind: 'top', d: 1, hasKids: hasKids, open: open, nk: t.kids.length, kids: [], top: t.n, raw: t };
+      if (open) t.kids.forEach(function (k, j) { tn.kids.push({ id: id + 'k' + j, n: k.n, p: k.p, k: k.k, mt: k.mt, kind: 'kid', d: 2, top: t.n, kids: [], raw: k }); });
+      rootN.kids.push(tn); if (t.k) { sw += t.sw; sv += t.sv; kk += t.k; mt = Math.max(mt, t.mt || 0); }
+    });
+    rootN.p = kk ? Math.round(sv / sw * 100) : null; rootN.k = kk; rootN.mt = mt;
+    (function col(n) { all.push(n); n.kids.forEach(col); })(rootN);
+    var NW = 108, NH = 48, GX = 20, GY = 150, leaves = [];
+    (function lv(n) { if (!n.kids.length) leaves.push(n); else n.kids.forEach(lv); })(rootN);
+    leaves.forEach(function (l, i) { l.x = 40 + i * (NW + GX) + NW / 2; });
+    (function xs(n) { if (n.kids.length) { n.kids.forEach(xs); n.x = (n.kids[0].x + n.kids[n.kids.length - 1].x) / 2; } })(rootN);
+    var maxD = all.reduce(function (m, n) { return Math.max(m, n.d); }, 0), W = 80 + leaves.length * (NW + GX) - GX, H = 50 + maxD * GY + 90;
+    all.forEach(function (n) { n.y = 50 + n.d * GY; });
+    if (!kmSel || !all.some(function (n) { return n.id === kmSel; })) { var w = all.filter(function (n) { return n.kind !== 'root' && n.p !== null; }).sort(function (a, b) { return a.p - b.p; })[0]; kmSel = w ? w.id : 'r'; }
+    var byId = {}; all.forEach(function (n) { byId[n.id] = n; });
+    // map
+    var svgNS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(svgNS, 'svg');
+    var el = function (tag, attrs, text) { var e = document.createElementNS(svgNS, tag); Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; return e; };
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'แผนที่ความรู้วิชา' + SUBJECT_LABEL[kmS]);
+    all.forEach(function (n) { n.kids.forEach(function (c) { var y1 = n.y + NH / 2, y2 = c.y - NH / 2, my = (y1 + y2) / 2; svg.appendChild(el('path', { class: 'km-lk', d: 'M' + n.x + ' ' + y1 + ' C' + n.x + ' ' + my + ' ' + c.x + ' ' + my + ' ' + c.x + ' ' + y2 })); }); });
+    var links = (state.mastery.trees[kmS] && state.mastery.trees[kmS].links) || [], nLinks = 0;
+    links.forEach(function (l) {
+      var A = all.filter(function (n) { return n.kind !== 'root' && nameMatch(n.n, l[0]); })[0], B = all.filter(function (n) { return n.kind !== 'root' && n !== A && nameMatch(n.n, l[1]); })[0];
+      if (!A || !B) return; nLinks++;
+      svg.appendChild(el('path', { class: 'km-lk x', d: 'M' + A.x + ' ' + (A.y + NH / 2) + ' Q' + ((A.x + B.x) / 2) + ' ' + (Math.max(A.y, B.y) + NH + 36) + ' ' + B.x + ' ' + (B.y + NH / 2) }));
+    });
+    all.forEach(function (n) {
+      var g = el('g', { class: 'km-node ' + (n.p === null ? 'na' : n.p >= 80 ? 'gr' : n.p >= 60 ? 'yl' : 'rd') + (kmSel === n.id ? ' sel' : ''), transform: 'translate(' + (n.x - NW / 2) + ',' + (n.y - NH / 2) + ')', tabindex: '0', role: 'button', 'aria-label': n.n + ' ' + (n.p === null ? 'ยังไม่มีข้อมูล' : n.p + ' เปอร์เซ็นต์') });
+      g.appendChild(el('title', {}, n.n)); g.appendChild(el('rect', { width: NW, height: NH, rx: 12 }));
+      g.appendChild(el('text', { x: NW / 2, y: 20 }, kmTrim(n.n) + (n.kind === 'top' && n.hasKids && !n.open ? ' ▸' : '')));
+      g.appendChild(el('text', { class: 'pc', x: NW / 2, y: 38 }, n.p === null ? 'ยังไม่มีข้อมูล' : n.p + '%'));
+      var pick = function () { if (n.kind === 'top' && n.hasKids && kmSel === n.id) kmOpen[kmS + n.id] = !n.open; kmSel = n.id; renderKmap(); };
+      g.addEventListener('click', pick); g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      svg.appendChild(g);
+    });
+    if (!kmScale) kmScale = Math.max(0.85, Math.min(1.1, 700 / W));
+    svg.setAttribute('width', W * kmScale); svg.setAttribute('height', H * kmScale);
+    var scroll = h('div', { class: 'km-scroll' }); scroll.appendChild(svg);
+    var zbtn = function (t, lab, fn) { return h('button', { class: 'km-zb', type: 'button', 'aria-label': lab, text: t, onclick: fn }); };
+    var bar = h('div', { class: 'km-bar' }, [
+      zbtn('−', 'ซูมออก', function () { kmScale = Math.max(0.4, kmScale / 1.2); renderKmap(); }), zbtn('พอดีจอ', 'พอดีจอ', function () { kmScale = Math.max(0.3, Math.min(1.1, (scroll.clientWidth - 6) / W)); renderKmap(); }), zbtn('+', 'ซูมเข้า', function () { kmScale = Math.min(1.6, kmScale * 1.2); renderKmap(); }),
+      zbtn('ย่อทั้งหมด', 'ย่อทั้งหมด', function () { tops.forEach(function (t, i) { kmOpen[kmS + 't' + i] = false; }); renderKmap(); }), zbtn('ขยายทั้งหมด', 'ขยายทั้งหมด', function () { tops.forEach(function (t, i) { kmOpen[kmS + 't' + i] = true; }); renderKmap(); }),
+      h('span', { class: 'km-leg' }, [h('span', null, [h('i', { style: 'background:#3F7A52' }), '80%+']), h('span', null, [h('i', { style: 'background:#B58A1B' }), '60–79']), h('span', null, [h('i', { style: 'background:#C0473B' }), '<60']), h('span', null, [h('i', { class: 'na' }), 'ยังไม่มีข้อมูล']), h('span', { text: '┄ เกี่ยวข้อง' })])
+    ]);
+    root.appendChild(h('div', { class: 'km-wrap' }, [bar, scroll, h('div', { class: 'km-hint', text: 'เลื่อนได้ทั้งแนวตั้งและแนวนอน · เมาส์: ลากพื้นหลังเพื่อเลื่อน, Ctrl + ลูกกลิ้งเพื่อซูม · มือถือ: ลากนิ้ว' })]));
+    // pan with the mouse, zoom with ctrl+wheel; keep the selected node in view
+    var d0 = null;
+    scroll.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse' || e.target.closest('.km-node')) return; d0 = { x: e.clientX, y: e.clientY, l: scroll.scrollLeft, t: scroll.scrollTop }; scroll.classList.add('drag'); });
+    scroll.addEventListener('pointermove', function (e) { if (!d0) return; scroll.scrollLeft = d0.l - (e.clientX - d0.x); scroll.scrollTop = d0.t - (e.clientY - d0.y); });
+    var endDrag = function () { d0 = null; scroll.classList.remove('drag'); };
+    scroll.addEventListener('pointerup', endDrag); scroll.addEventListener('pointerleave', endDrag);
+    scroll.addEventListener('wheel', function (e) { if (e.ctrlKey) { e.preventDefault(); kmScale = Math.max(0.4, Math.min(1.6, kmScale * (e.deltaY < 0 ? 1.1 : 1 / 1.1))); renderKmap(); } }, { passive: false });
+    var sn = byId[kmSel];
+    if (sn && kmKeep.id === kmS + kmSel) { scroll.scrollLeft = kmKeep.l; scroll.scrollTop = kmKeep.t; }
+    setTimeout(function () {
+      if (!sn) return;
+      var nx = (sn.x - NW / 2) * kmScale, ny = (sn.y - NH / 2) * kmScale, w = NW * kmScale, hh = NH * kmScale;
+      if (nx < scroll.scrollLeft || nx + w > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = nx - scroll.clientWidth / 2 + w / 2;
+      if (ny < scroll.scrollTop || ny + hh > scroll.scrollTop + scroll.clientHeight) scroll.scrollTop = ny - scroll.clientHeight / 2 + hh / 2;
+      kmKeep = { id: kmS + kmSel, l: scroll.scrollLeft, t: scroll.scrollTop };
+    }, 0);
+    scroll.addEventListener('scroll', function () { kmKeep = { id: kmS + kmSel, l: scroll.scrollLeft, t: scroll.scrollTop }; });
+    // detail of the selected node
+    if (sn) {
+      var cl = sn.p === null ? 'na' : sn.p >= 80 ? 'gr' : sn.p >= 60 ? 'yl' : 'rd';
+      var errN = state.errbook.filter(function (e) { return e.subject === kmS && e.status === 'open' && (sn.kind === 'root' || nameMatch(e.topic, sn.top || sn.n) && (sn.kind !== 'kid' || !e.sub || nameMatch(e.sub, sn.n))); }).length;
+      var info = sn.k ? (sn.kind === 'kid' ? 'จาก ' + sn.k + ' ข้อ' + (sn.k < 5 ? ' · ข้อมูลยังน้อย ประมาณการ' : '') : 'รวม ' + sn.k + ' ข้อ' + (sn.kind === 'top' ? ' จาก ' + sn.nk + ' หัวข้อย่อย' : '')) + (sn.mt ? ' · ทำล่าสุด ' + fmtDate(sn.mt) : '') : 'ยังไม่เคยทำแบบฝึกหัดเรื่องนี้ ลองทำสัก 5 ข้อเพื่อให้รู้ระดับ';
+      var label = sn.kind === 'kid' ? sn.n + ' (หัวข้อ ' + sn.top + ')' : sn.n;
+      var related = [];
+      links.forEach(function (l) { [[l[0], l[1]], [l[1], l[0]]].forEach(function (p) { if (nameMatch(p[0], sn.n)) { var o = all.filter(function (n) { return n.kind !== 'root' && nameMatch(n.n, p[1]); })[0]; if (o && related.indexOf(o) < 0 && o !== sn) related.push(o); } }); });
+      var actions = [
+        h('button', { class: 'textbtn strong', type: 'button', text: '📖 เรียน', onclick: async function () { await setSubject(kmS); if (state.busy) return; showView('chat'); fillInput('ช่วยสอนเรื่อง ' + label + ' ทีละขั้น แล้วถามเช็กความเข้าใจด้วย'); } }),
+        h('button', { class: 'textbtn strong' + (kmArm === 'quiz' ? ' armed' : ''), type: 'button', text: kmArm === 'quiz' ? '📝 ยืนยัน (ใช้ AI)' : '📝 ทำข้อสอบ', onclick: function () { if (kmArm !== 'quiz') { kmArm = 'quiz'; clearTimeout(kmArmTimer); kmArmTimer = setTimeout(function () { kmArm = ''; renderKmap(); }, 3500); renderKmap(); return; } kmArm = ''; runAction('quiz', { count: 5, level: 'exam', topic: label }); } }),
+        h('button', { class: 'textbtn strong', type: 'button', text: '🗂 Flashcard', onclick: async function () { fl.sel = sn.kind === 'root' ? (SUBJECT_LABEL[kmS] || '') : await kmFlashDeck(sn.top || sn.n, sn.kind === 'kid' ? sn.n : ''); showView('flash'); } })
+      ];
+      root.appendChild(h('div', { class: 'km-detail ms-' + cl }, [
+        h('h3', null, [sn.n + ' ', h('span', { class: 'km-big', text: sn.p === null ? 'ยังไม่มีข้อมูล' : sn.p + '% ' + (sn.p >= 80 ? '🟢' : sn.p >= 60 ? '🟡' : '🔴') })]),
+        h('div', { class: 'ms-bar wide' }, [h('i', { style: 'width:' + (sn.p || 0) + '%' })]),
+        h('div', { class: 'muted' }, [info + (errN ? ' · ' : ''), errN ? h('a', { href: '#', text: 'มีข้อผิดที่เกี่ยวข้อง ' + errN + ' ข้อ', onclick: function (e) { e.preventDefault(); showView('notebook'); } }) : null]),
+        related.length ? h('div', { class: 'km-rel' }, [h('span', { class: 'muted', text: 'เกี่ยวข้องกับ: ' })].concat(related.map(function (o) { return h('button', { type: 'button', text: o.n + (o.p === null ? '' : ' ' + o.p + '%'), onclick: function () { kmSel = o.id; renderKmap(); } }); }))) : null,
+        h('div', { class: 'row' }, actions),
+        h('p', { class: 'muted', text: 'เรียน = เปิดแชตวิชานี้พร้อมข้อความที่ร่างไว้ (ยังไม่ส่ง) · ทำข้อสอบ = ออกแนวข้อสอบ 5 ข้อเรื่องนี้ (ใช้ AI กดยืนยันอีกครั้ง) · Flashcard = เปิดชุดบัตรของหัวข้อนี้' })
+      ]));
+    }
+    // where the dashed lines come from
+    var lk = h('button', { class: 'textbtn', type: 'button', text: nLinks ? 'ร่างเส้นเชื่อมใหม่ (ใช้ AI)' : 'ให้พี่สาวร่างเส้นเชื่อมระหว่างหัวข้อ (ใช้ AI 1 ครั้ง)' });
+    lk.addEventListener('click', function () { genLinks(all, lk); });
+    root.appendChild(h('div', { class: 'ms-note' }, [h('b', { text: 'แผนที่นี้สร้างจากอะไร' }), h('p', { class: 'muted', text: 'โครงหัวข้อและตัวเลข % เป็นชุดเดียวกับหน้า Mastery (หัวข้อที่เจอในข้อสอบ บัตรคำ และโครงหัวข้อตามหลักสูตรที่พี่สาวร่างไว้) ส่วนเส้นประระหว่างหัวข้อที่เกี่ยวข้อง ต้องให้พี่สาวร่างครั้งเดียวต่อวิชา ไม่ได้ขึ้นเองจากข้อมูล' }), h('div', { class: 'row' }, [lk])]));
+  }
+  var kmKeep = { id: '', l: 0, t: 0 };
+  async function genLinks(all, btn) {
+    if (kmBusy) return;
+    if (!S.apiKey) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    var names = all.filter(function (n) { return n.kind !== 'root'; }).map(function (n) { return n.n; });
+    if (names.length < 3) { showToast('ยังมีหัวข้อน้อยเกินไป'); return; }
+    kmBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังร่างเส้นเชื่อม…';
+    try {
+      var schema = { type: 'object', properties: { links: { type: 'array', items: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, required: ['a', 'b'] } } }, required: ['links'] };
+      var prompt = 'Subject: ' + ((SUBJECTS.filter(function (x) { return x.id === kmS; })[0] || {}).en || kmS) + '. Topics of a Thai student: ' + names.join('; ') + '.\nPick up to 12 pairs of these topics that are closely related (one is a prerequisite of the other, one causes the other, or they are commonly confused). Use the exact names from the list, never invent new names, and do not pair a topic with itself.';
+      var acc = await gemini({ system: 'You are a curriculum expert for the Thai school system. Answer only with the JSON requested.', code: false, search: false, thinking: 'low', noChat: true, label: 'เส้นเชื่อมแผนที่ความรู้', schema: schema,
+        buildContents: async function () { return [{ role: 'user', parts: [{ text: prompt }] }]; } });
+      checkFinish(acc);
+      var raw = acc.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''), d;
+      try { d = JSON.parse(raw); } catch (e2) { var a0 = raw.indexOf('{'), b0 = raw.lastIndexOf('}'); d = JSON.parse(raw.slice(a0, b0 + 1)); }
+      var pairs = (d.links || []).filter(function (l) { return l && names.indexOf(str(l.a)) >= 0 && names.indexOf(str(l.b)) >= 0 && l.a !== l.b; }).slice(0, 12).map(function (l) { return [clip(l.a, 40), clip(l.b, 40)]; });
+      if (!pairs.length) throw apiError('invalid_json');
+      var t = state.mastery.trees[kmS] || (state.mastery.trees[kmS] = { at: 0, tree: [], links: [] });
+      t.links = pairs; await kvSet('mastery', state.mastery);
+    } catch (e) { showToast(errorCopy(e)); }
+    kmBusy = false; renderKmap();
   }
 
   // Progress
@@ -3900,7 +4980,7 @@
 
   // Backup
   async function exportBackup(withFiles, share) {
-    var out = { app: 'hongtiew', version: 2, exportedAt: Date.now(), settings: { model: S.model, thinking: S.thinking, deepModel: S.deepModel || '', showTok: S.showTok !== false, codeExec: S.codeExec, search: S.search, theme: S.theme, botName: S.botName || '', botAvatar: botAvatarUrl() }, profile: state.profile, log: state.log, planner: normPlanner(state.planner), skills: state.skills, mood: state.mood, moodSummary: state.moodSummary };
+    var out = { app: 'hongtiew', version: 2, exportedAt: Date.now(), settings: { model: S.model, thinking: S.thinking, deepModel: S.deepModel || '', showTok: S.showTok !== false, codeExec: S.codeExec, search: S.search, theme: S.theme, botName: S.botName || '', botAvatar: botAvatarUrl() }, profile: state.profile, log: state.log, planner: normPlanner(state.planner), skills: state.skills, mood: state.mood, moodSummary: state.moodSummary, errbook: state.errbook, mastery: state.mastery, flashDecks: state.flashDecks };
     for (var i = 0; i < STORES.length; i++) {
       var s = STORES[i];
       if (s === 'kv') continue;
@@ -3949,6 +5029,9 @@
       if (data.profile && typeof data.profile.text === 'string') { state.profile = data.profile; await kvSet('profile', data.profile); }
       if (Array.isArray(data.log)) { state.log = data.log; await saveLog(); }
       if (data.planner && typeof data.planner === 'object') { state.planner = normPlanner(data.planner); savePlanner(); }
+      if (Array.isArray(data.errbook)) { state.errbook = normErr(data.errbook); await saveErr(); }
+      if (data.mastery && typeof data.mastery === 'object') { state.mastery = normMastery(data.mastery); await kvSet('mastery', state.mastery); }
+      if (Array.isArray(data.flashDecks)) { state.flashDecks = normDecks(data.flashDecks); await kvSet('flashdecks', state.flashDecks); }
       if (Array.isArray(data.skills)) { state.skills = data.skills.map(normSkill).filter(Boolean); saveSkills(); }
       if (data.mood && typeof data.mood === 'object') { state.mood = normMood(data.mood); await saveMood(); }
       if (data.moodSummary) { state.moodSummary = normMoodSummary(data.moodSummary); await kvSet('moodSummary', state.moodSummary); }
@@ -3970,45 +5053,73 @@
   function closeDrawer(d) { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); }
   function closeAllDrawers() { document.querySelectorAll('.drawer.open').forEach(closeDrawer); }
   document.querySelectorAll('.drawer').forEach(function (d) { d.querySelectorAll('[data-close]').forEach(function (c) { c.addEventListener('click', function () { closeDrawer(d); }); }); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAllDrawers(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAllDrawers(); if (narrowMQ.matches && sideOpen()) setSide(false); } });
 
   $('btn-new').addEventListener('click', function () {
     if (state.busy && state.ctl) state.ctl.abort();
-    state.session = freshSession(); state.pendingImages = []; rollStarters(state.subject());
-    renderThumbs(); renderMatChips(); renderSubjects(); updateTitle(); renderAll(); updateComposer(); input.focus();
+    state.session = freshSession(); state.pendingImages = [];
+    renderThumbs(); renderMatChips(); renderSubjects(); renderAll(); updateComposer();
+    if (state.view !== 'chat') showView('chat'); else { updateTitle(); if (narrowMQ.matches) setSide(false); }
+    renderHistoryList(); input.focus();
   });
-  $('btn-history').addEventListener('click', function () { openDrawer('drawer-history'); loadHistory(); });
+
+  // ---------- chat history in the left menu ----------
+  var histMenuId = null, histArm = null, histArmTimer = 0;
+  function histSummary(it) { return { id: it.id, title: it.title || '', subject: it.subject || 'all', updatedAt: it.updatedAt || 0, n: (it.messages || []).length }; }
+  function histUpsert(snap) {
+    var s = histSummary(snap), i = state.hist.findIndex(function (x) { return x.id === s.id; });
+    if (i >= 0) state.hist[i] = s; else state.hist.push(s);
+    state.hist.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    renderHistoryList();
+  }
   async function loadHistory() {
-    var list = $('history-list'); list.innerHTML = '';
     var items = await DB.all('sessions').catch(function () { return []; });
-    items.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
-    if (!items.length) { list.appendChild(h('li', null, [h('span', { class: 'muted', style: 'padding:12px 4px', text: 'ยังไม่มีบทเรียนที่บันทึกไว้' })])); return; }
+    state.hist = items.map(histSummary).sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    renderHistoryList();
+    if (!state.session.messages.length) renderAll(); // the start page can now offer "continue the latest chat"
+  }
+  function openSessionById(id) { return DB.get('sessions', id).then(function (it) { if (it) openSession(it); }); }
+  function renderHistoryList() {
+    var list = $('history-list'); if (!list) return;
+    list.innerHTML = '';
+    var q = ($('hist-q').value || '').trim().toLowerCase();
+    var items = state.hist.filter(function (it) { return it.n && (!q || (it.title || '').toLowerCase().indexOf(q) !== -1 || (SUBJECT_LABEL[it.subject] || '').toLowerCase().indexOf(q) !== -1); });
+    if (!items.length) { list.appendChild(h('li', null, [h('span', { class: 'muted', style: 'padding:12px 4px', text: q ? 'ไม่พบบทเรียนที่ค้นหา' : 'ยังไม่มีบทเรียนที่บันทึกไว้' })])); return; }
     items.slice(0, 80).forEach(function (it) {
-      var del = h('button', { class: 'del', type: 'button', text: 'ลบ' });
-      var li;
-      del.addEventListener('click', async function () {
-        if (!del.classList.contains('confirm')) { del.classList.add('confirm'); del.textContent = 'ยืนยันลบ'; setTimeout(function () { del.classList.remove('confirm'); del.textContent = 'ลบ'; }, 3500); return; }
-        await DB.del('sessions', it.id).catch(function () {});
-        li.remove();
-        if (state.session.id === it.id) { state.session = freshSession(); renderMatChips(); updateTitle(); renderAll(); }
-      });
-      li = h('li', { class: it.id === state.session.id ? 'current' : '' }, [
-        h('button', { class: 'open', type: 'button', onclick: function () { openSession(it); closeDrawer($('drawer-history')); } }, [h('span', { class: 't', text: it.title || 'บทเรียน' }), h('span', { class: 'm', text: (SUBJECT_LABEL[it.subject] ? SUBJECT_LABEL[it.subject] + '  ' : '') + fmtDate(it.updatedAt) })]),
-        del
-      ]);
-      list.appendChild(li);
+      var armed = histArm === it.id;
+      var kids = [
+        h('button', { class: 'open', type: 'button', onclick: function () { openSessionById(it.id); } }, [
+          h('i', { 'aria-hidden': 'true' }),
+          h('div', { class: 'tx' }, [h('span', { class: 't', text: it.title || 'บทเรียน' }), h('span', { class: 'm', text: (SUBJECT_LABEL[it.subject] ? SUBJECT_LABEL[it.subject] + ' · ' : '') + fmtDate(it.updatedAt) })])
+        ]),
+        h('button', { class: 'hmore', type: 'button', 'aria-label': 'ตัวเลือกของบทเรียนนี้', 'aria-expanded': histMenuId === it.id ? 'true' : 'false', text: '⋯', onclick: function (e) { e.stopPropagation(); histMenuId = histMenuId === it.id ? null : it.id; histArm = null; renderHistoryList(); } })
+      ];
+      if (histMenuId === it.id) kids.push(h('div', { class: 'hmenu' }, [h('button', { class: 'del' + (armed ? ' confirm' : ''), type: 'button', text: armed ? 'ยืนยันลบ' : 'ลบแชตนี้', onclick: function (e) { e.stopPropagation(); deleteSession(it.id); } })]));
+      list.appendChild(h('li', { class: it.id === state.session.id ? 'current' : '', 'data-s': it.subject }, kids));
     });
   }
+  // two taps to delete (like the file list): the first arms the button for 3.5 s, the second deletes
+  async function deleteSession(id) {
+    if (histArm !== id) { histArm = id; renderHistoryList(); clearTimeout(histArmTimer); histArmTimer = setTimeout(function () { histArm = null; renderHistoryList(); }, 3500); return; }
+    clearTimeout(histArmTimer); histArm = null; histMenuId = null;
+    await DB.del('sessions', id).catch(function () {});
+    state.hist = state.hist.filter(function (x) { return x.id !== id; });
+    if (state.session.id === id) { if (state.busy && state.ctl) state.ctl.abort(); state.session = freshSession(); renderMatChips(); updateTitle(); renderAll(); }
+    renderHistoryList();
+  }
+  $('hist-q').addEventListener('input', renderHistoryList);
+  document.addEventListener('click', function (e) { if (histMenuId && !e.target.closest('.hmenu, .hmore')) { histMenuId = null; histArm = null; renderHistoryList(); } });
   function openSession(it) {
     if (state.busy && state.ctl) state.ctl.abort();
     state.session = { id: it.id, title: it.title || '', subject: it.subject || 'all', updatedAt: it.updatedAt || Date.now(), tok: it.tok || null, messages: (it.messages || []).map(function (m) { return JSON.parse(JSON.stringify(m)); }), materialIds: (it.materialIds || []).filter(function (id) { return !!getMaterial(id); }), matScope: JSON.parse(JSON.stringify(it.matScope || {})) };
     S.subject = state.session.subject; saveSettings();
-    renderSubjects(); renderMatChips(); updateTitle(); renderAll(); updateComposer();
-    if (state.view !== 'chat') showView('chat');
+    renderSubjects(); renderMatChips(); updateTitle(); renderAll(); updateComposer(); renderHistoryList();
+    if (state.view !== 'chat') showView('chat'); else if (narrowMQ.matches) setSide(false);
   }
-
   // Study tools drawer
-  function openTools() { renderToolsDrawer(); openDrawer('drawer-tools'); }
+  // Study tools: its own page (reached from the quick button or the library); the back link returns to where you were
+  function openTools() { if (state.view !== 'tools') state.toolsFrom = state.view; renderToolsDrawer(); showView('tools'); }
+  $('tools-back').addEventListener('click', function () { showView(state.toolsFrom && state.toolsFrom !== 'tools' ? state.toolsFrom : 'chat'); });
   function renderToolsDrawer() {
     var target = $('tb-target'); target.innerHTML = '';
     var mats = activeMaterials();
@@ -4149,13 +5260,18 @@
     var goneExams = sweepExams();
     if (goneExams.length) planNotice = 'ลบการสอบที่ผ่านมานานกว่า ' + EXAM_KEEP_DAYS + ' วันให้อัตโนมัติ: ' + goneExams.map(function (e) { return e.name; }).join(', ');
     state.skills = (await kvGet('skills', [])).map(normSkill).filter(Boolean);
+    state.errbook = normErr(await kvGet('errbook', []));
+    state.mastery = normMastery(await kvGet('mastery', null));
+    state.flashDecks = normDecks(await kvGet('flashdecks', []));
+    if (!state.errbook.length && !(await kvGet('errbook_imp', false))) { importLogToErr(); await kvSet('errbook_imp', true); }
+    updateNbBadge(); refreshMasteryCache();
     if (state.view === 'review') renderReview();
     var mats = await DB.all('materials').catch(function () { return []; });
     state.materials = mats.sort(function (a, b) { return b.created - a.created; }).map(function (m) { return Object.assign(m, { status: 'ready' }); });
     var sessions = await DB.all('sessions').catch(function () { return []; });
     sessions.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
     if (sessions[0] && !state.session.messages.length && Date.now() - (sessions[0].updatedAt || 0) < 18 * 3600e3) openSession(sessions[0]);
-    refreshDue(); refreshStreak();
+    refreshDue(); refreshStreak(); loadHistory(); startAdaptTimer();
     if (navigator.storage && navigator.storage.persist) { S.persisted = await navigator.storage.persist().catch(function () { return undefined; }); saveSettings(); }
     var lastSafe = S.lastBackupAt || (sessions.length ? sessions[sessions.length - 1].updatedAt : Date.now());
     if (Date.now() - lastSafe > (S.persisted === false ? 3 : 7) * DAY && Date.now() - (S.backupNudgeAt || 0) > DAY) {
@@ -4165,6 +5281,10 @@
   })();
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    var hadSW = !!navigator.serviceWorker.controller; // 3.1.6: no toast on first install
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadSW) showToast('มีเวอร์ชันใหม่แล้ว', 'รีโหลด', function () { location.reload(); });
+    });
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
 })();
