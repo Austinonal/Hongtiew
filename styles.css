@@ -1154,15 +1154,3 @@ textarea.text.tl-text { min-height: 84px; height: 84px; resize: vertical; }
 @media (max-width: 420px) { .pz-seg button { padding: 6px 8px; font-size: .86rem; } }
 @media (max-width: 360px) { .pz-seg button { padding: 6px 6px; font-size: .84rem; } }
 textarea.text.pz-goals { min-height: 110px; }
-
-
-/* Dark mode: the subject dots (chat history, planner) glow so they stay visible (3.3.1) */
-[data-s="math"] { --sg: #8FCB9C; } [data-s="physics"] { --sg: #8DB8DD; } [data-s="chem"] { --sg: #F0A091; }
-[data-s="bio"] { --sg: #E6CF7A; } [data-s="python"] { --sg: #B9A8E6; } [data-s="english"] { --sg: #8FD0C6; }
-[data-s="other"] { --sg: #F0B98A; } [data-s="all"] { --sg: #ABA298; }
-:root[data-theme="dark"] .side .hist .open i, :root[data-theme="dark"] .pl-nx .ln i { background: var(--sg, #ABA298); box-shadow: 0 0 0 1px color-mix(in srgb, var(--sg, #ABA298) 55%, transparent), 0 0 8px 2px color-mix(in srgb, var(--sg, #ABA298) 60%, transparent); }
-:root[data-theme="dark"] .side .hist .open i { width: 11px; height: 11px; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .side .hist .open i, :root:not([data-theme="light"]) .pl-nx .ln i { background: var(--sg, #ABA298); box-shadow: 0 0 0 1px color-mix(in srgb, var(--sg, #ABA298) 55%, transparent), 0 0 8px 2px color-mix(in srgb, var(--sg, #ABA298) 60%, transparent); }
-  :root:not([data-theme="light"]) .side .hist .open i { width: 11px; height: 11px; }
-}
