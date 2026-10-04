@@ -13,6 +13,9 @@
     { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite (เร็ว ประหยัด)' },
     { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (ต้องเปิดใช้แบบเสียเงิน)' }
   ];
+  var LOCAL_PREFIX = 'ollama:'; // model ids that start with this run on your own computer through Ollama
+  var LOCAL_DEFAULT_NAME = 'qwen3.5:9b';
+  var LOCAL_MIN_VER = '0.17.1'; // Qwen 3.5 needs this Ollama version or newer
   var INLINE_MAX = 48 * 1024 * 1024;
   var FILE_API_MIN = 3.5 * 1024 * 1024;
   var FILE_TTL = 46 * 3600 * 1000;
@@ -84,7 +87,7 @@
       return 'Create an exam-style quiz from the target with exactly ' + o.count + ' questions, at ' + LEVELS[o.level].en + '. '
         + (o.mistakes ? 'Target the concepts behind my recent quiz mistakes listed in the system instructions, using new numbers and contexts rather than repeating the same questions. ' : '')
         + 'Mostly multiple-choice questions with 5 choices and exactly one correct answer, in the style of Thai A-Level exams. When the content involves calculation, make about a third of the questions "numeric" fill-in questions whose answer is a single number. Make wrong choices plausible, based on real common mistakes. '
-        + 'Before finalizing, verify every answer key' + (codeOn() ? ' with the code execution tool for any numeric work' : ' by working it out carefully') + '. '
+        + 'Before finalizing, verify every answer key' + (S.codeExec ? ' with the code execution tool for any numeric work' : ' by working it out carefully') + '. '
         + 'Tagging: set "topic" to the broad chapter-level topic from the Thai curriculum (for example พันธุศาสตร์) and "subtopic" to the specific sub-topic (for example Mutation), reusing exactly the same names for the same topics across questions. For every multiple-choice question also fill "wrong_why" and "error_types" as arrays aligned one-to-one with the choices array: for each wrong choice give a short Thai reason (at most 20 words) describing the misconception that leads a student to pick it, and its error type (concept = misunderstood the principle, recall = remembered a fact or formula wrongly, calc = calculation or sign slip, read = misread the question, careless = careless slip); for the correct choice use an empty string and "none". For numeric questions fill "common_error" (the most likely wrong approach, in Thai) and "error_type" instead. '
         + 'Write in Thai (technical terms may stay in English); use $...$ LaTeX for math and \\ce{} for chemistry, escaping backslashes properly in JSON. In explanation, trap, and technique, refer to choices by their content, never by letter or number, because the choices will be shuffled. For numeric questions, leave choices empty and give numeric_answer and unit.';
     },
@@ -194,13 +197,24 @@
   // ---------- settings ----------
   var SETTINGS_KEY = 'ht2:settings';
   var S = (function () {
-    var d = { apiKey: '', provider: 'gemini', localUrl: 'http://localhost:11434', localModel: 'qwen3.5:9b', model: DEFAULT_MODEL, thinking: 'auto', deepModel: '', showTok: true, codeExec: true, search: true, theme: 'system', subject: 'all', models: null, searchBlockedAt: 0, fileApiFailAt: 0, onboarded: false, tb: { count: 10, level: 'exam', cards: 15, timed: false } };
+    var d = { apiKey: '', model: DEFAULT_MODEL, thinking: 'auto', deepModel: '', showTok: true, codeExec: true, search: true, theme: 'system', subject: 'all', models: null, searchBlockedAt: 0, fileApiFailAt: 0, onboarded: false, local: { url: 'http://localhost:11434', ctx: 16384, models: [] }, tb: { count: 10, level: 'exam', cards: 15, timed: false } };
     try { var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); Object.keys(s).forEach(function (k) { d[k] = s[k]; }); } catch (e) {}
     if (!d.tb || typeof d.tb !== 'object') d.tb = { count: 10, level: 'exam', cards: 15, timed: false };
+    if (!d.local || typeof d.local !== 'object') d.local = {};
+    d.local.url = d.local.url || 'http://localhost:11434'; d.local.ctx = +d.local.ctx || 16384; if (!Array.isArray(d.local.models)) d.local.models = [];
     if (!d.v315) { d.v315 = 1; d.thinking = 'auto'; } // 3.1.5: thinking level is chosen automatically unless set again
     return d;
   })();
   function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch (e) {} }
+  function isLocal(id) { return str(id).indexOf(LOCAL_PREFIX) === 0; }
+  function canAsk() { return !!S.apiKey || isLocal(S.model); } // a Gemini key OR a local model is enough to talk
+  function localBase() { return str(S.local.url).trim().replace(/\/+$/, '') || 'http://localhost:11434'; }
+  function localModelList() {
+    var names = S.local.models.slice();
+    if (names.indexOf(LOCAL_DEFAULT_NAME) < 0) names.unshift(LOCAL_DEFAULT_NAME);
+    return names.map(function (n) { return { id: LOCAL_PREFIX + n, label: '💻 ' + n + ' (ในเครื่อง ไม่ต้องใช้ key)', inTok: S.local.ctx, local: true }; });
+  }
+  function allModels() { return (S.models && S.models.length ? S.models : FALLBACK_MODELS).concat(localModelList()); }
 
   // ---------- characters (3.3.2): พี่สาว (the original), ฮันนี่, แฮริน and up to 3 of your own ----------
   var BOT_NAME_DEFAULT = 'พี่สาว', BOT_AV_DEFAULT = '언니', BOT_AV_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
@@ -222,10 +236,10 @@
       voice: '',
       fam: [[1, '', 'stay composed and clear, like a big sister you only just met'], [2, 'care', 'ask briefly about tiredness or sleep when I sound drained'], [3, 'lead', 'open with a quick plan and end with a short wrap-up'], [4, 'proud', 'be openly proud of my progress'], [4, 'recall', 'recall the goals I told you and remind me directly, out of care']] },
     h: { name: 'ฮันนี่', tag: 'สายสดใสอบอุ่น', ini: 'ฮ',
-      sig: [['giggle', 'ขำกลั้น'], ['food', 'อุปมาอาหาร 🍞'], ['nick', 'เรียกชื่อเล่น'], ['recall', 'จำจุดที่พลาดซ้ำ']],
-      unlock: ['ทักทายอบอุ่น ชมที่กระบวนการ', 'ขำกลั้นหลุดเป็นครั้งคราว', 'เรียกชื่อเล่น และอุปมาด้วยอาหาร', 'จำเรื่องที่เล่า และพูดถึงจุดอ่อนที่พลาดซ้ำ'],
+      sig: [['food', 'อุปมาอาหาร 🍞'], ['nick', 'เรียกชื่อเล่น'], ['recall', 'จำจุดที่พลาดซ้ำ']],
+      unlock: ['ทักทายอบอุ่น ชมที่กระบวนการ', 'ยังเป็นกันเองแบบเดิม (ยังไม่มีสิ่งใหม่)', 'เรียกชื่อเล่น และอุปมาด้วยอาหาร', 'จำเรื่องที่เล่า และพูดถึงจุดอ่อนที่พลาดซ้ำ'],
       voice: 'a bright, warm, caring study buddy with a gentle playful side. When I sound tired or stressed, notice it in one short line before teaching. Praise the specific thing I did well; never blame mistakes ("everyone slips here, let us look together"); make hard ideas feel friendly with everyday examples. Keep an upbeat, soft tone and never be sarcastic. Refer to yourself as "พี่" and call me "น้อง" or my nickname',
-      fam: [[1, '', 'be warm and polite, with no inside jokes yet'], [2, 'giggle', 'you may hold back a giggle once in a while, written like "(กลั้นขำ)", when I fall into a silly trap'], [3, 'nick', 'use my nickname'], [3, 'food', 'food analogies (bread, rice, noodles) are welcome when they explain an idea'], [4, 'recall', 'kindly bring up my repeated weak spots and the goals I told you']] },
+      fam: [[1, '', 'be warm and polite, with no inside jokes yet'], [3, 'nick', 'use my nickname'], [3, 'food', 'food analogies (bread, rice, noodles) are welcome when they explain an idea'], [4, 'recall', 'kindly bring up my repeated weak spots and the goals I told you']] },
     r: { name: 'แฮริน', tag: 'สายนิ่งซ่อนความกวน', ini: 'ห',
       sig: [['dry', 'มุกแห้ง'], ['cat', 'อีโมจิ 🐱'], ['callout', 'ชี้จุดอ่อนที่ซ้ำ'], ['cheer', 'ให้กำลังใจท้ายข้อ']],
       unlock: ['ประโยคสั้น ตรง ไม่มีมุก', 'มุกแห้งหลุดมาบ้าง', 'กวนเต็มที่ และใช้ 🐱', 'ชี้จุดอ่อนที่ซ้ำ และให้กำลังใจจริงใจ'],
@@ -244,7 +258,7 @@
     cust: { role: 'sister', addr: 'nick', len: 'mid', emo: '1', lang: 'th', form: 50, phrases: [], rules: [], extra: '' }
   };
   var CH_PZ0 = {
-    h: { v: { friendly: 90, serious: 30, funny: 70, calm: 75, strict: 20, curious: 70 }, custom: [['ห่วงใย', 85], ['ขำกลั้น', 70]], pick: { explain: 'analogy', mistake: 'tell', confused: 'real' } },
+    h: { v: { friendly: 90, serious: 30, funny: 70, calm: 75, strict: 20, curious: 70 }, custom: [['ห่วงใย', 85]], pick: { explain: 'analogy', mistake: 'tell', confused: 'real' } },
     r: { v: { friendly: 40, serious: 70, funny: 55, calm: 85, strict: 55, curious: 65 }, custom: [['มุกแห้ง', 75], ['แมวๆ', 60]], pick: { explain: 'short', mistake: 'hint', confused: 'switch' } }
   };
   var CH_SEG = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('th', { granularity: 'grapheme' }) : null;
@@ -408,6 +422,7 @@
     var c = CHS.list[id], o = c.pz;
     if (!o || !o.__b) {
       o = normPz(o || chDefPz(id)); o.items = []; // normPz has no use for notes here
+      if (id === 'h') o.custom = o.custom.filter(function (x) { return !(x.n === 'ขำกลั้น' && x.v === 70); }); // the old untouched default trait is gone
       Object.defineProperty(o, '__b', { value: 1 });
       ['items', 'memOn'].forEach(function (k) { Object.defineProperty(o, k, { get: function () { return PZ_SHARED()[k]; }, set: function (v) { PZ_SHARED()[k] = v; }, enumerable: false, configurable: true }); });
       c.pz = o;
@@ -549,10 +564,8 @@
     saveUsage();
     if (usageListener) usageListener();
   }
-  function hasKey() { return S.provider === 'local' || !!S.apiKey; }
-  function codeOn() { return S.codeExec && S.provider !== 'local'; } // the code sandbox is Gemini's
-  function searchUsable() { return S.provider !== 'local' && S.search && (!S.searchBlockedAt || Date.now() - S.searchBlockedAt > 3 * DAY); }
-  function fileApiUsable() { return S.provider !== 'local' && (!S.fileApiFailAt || Date.now() - S.fileApiFailAt > 7 * DAY); }
+  function searchUsable() { return S.search && (!S.searchBlockedAt || Date.now() - S.searchBlockedAt > 3 * DAY); }
+  function fileApiUsable() { return !isLocal(S.model) && (!S.fileApiFailAt || Date.now() - S.fileApiFailAt > 7 * DAY); }
 
   // ---------- IndexedDB (with an in-memory fallback) ----------
   var STORES = ['sessions', 'materials', 'decks', 'cards', 'results', 'activity', 'kv'];
@@ -739,11 +752,11 @@
     return 10 - v + penalty + (/lite/.test(id) ? 0.2 : 0) + (/pro/.test(id) ? 0.1 : 0);
   }
 
-  async function streamGenerate(model, body, signal, onChunk, target) {
+  async function streamGenerate(model, body, signal, onChunk) {
     var res;
     try {
-      res = await fetch(target ? target.url : API + '/v1beta/models/' + encodeURIComponent(model) + ':streamGenerateContent?alt=sse', {
-        method: 'POST', headers: target ? target.headers : keyHeaders(true), body: JSON.stringify(body), signal: signal
+      res = await fetch(API + '/v1beta/models/' + encodeURIComponent(model) + ':streamGenerateContent?alt=sse', {
+        method: 'POST', headers: keyHeaders(true), body: JSON.stringify(body), signal: signal
       });
     } catch (e) {
       if (e && e.name === 'AbortError') throw apiError('cancelled');
@@ -811,67 +824,13 @@
     return { sources: sources.slice(0, 8), queries: (g.webSearchQueries || []).slice(0, 5), rendered: rendered || '' };
   }
 
-  // ---------- local model (Ollama / LM Studio / llama.cpp, OpenAI-compatible) ----------
-  // ponytail: text + images only. No code sandbox, web search, File API or PDF reading; add a PDF text extractor if local PDFs matter.
-  function toOpenAI(system, contents, notes) {
-    var msgs = [{ role: 'system', content: system }];
-    var skipNote = 'ไฟล์ PDF อ่านไม่ได้เมื่อใช้โมเดลในเครื่อง ครั้งนี้พี่สาวจึงไม่เห็นไฟล์นั้น (แปลงเป็น Word หรือข้อความก่อน หรือสลับไปใช้ Gemini)';
-    contents.forEach(function (c) {
-      var parts = [], skipped = false;
-      (c.parts || []).forEach(function (p) {
-        if (typeof p.text === 'string') parts.push({ type: 'text', text: p.text });
-        else if (p.inlineData && /^image\//.test(p.inlineData.mimeType)) parts.push({ type: 'image_url', image_url: { url: 'data:' + p.inlineData.mimeType + ';base64,' + p.inlineData.data } });
-        else skipped = true;
-      });
-      if (skipped && notes.indexOf(skipNote) < 0) notes.push(skipNote);
-      if (!parts.length) return;
-      var plain = parts.every(function (x) { return x.type === 'text'; });
-      msgs.push({ role: c.role === 'model' ? 'assistant' : 'user', content: plain ? parts.map(function (x) { return x.text; }).join('\n\n') : parts });
-    });
-    return msgs;
-  }
-  // splits reasoning from the answer for servers that leave <think>…</think> inline (the opening tag may already be in the prompt)
-  function splitThink(raw) {
-    var m = /^\s*(?:<think>)?([\s\S]*?)<\/think>\s*/.exec(raw);
-    if (m) return { thoughts: m[1], text: raw.slice(m[0].length) };
-    if (/^\s*<think>/.test(raw)) return { thoughts: raw.replace(/^\s*<think>/, ''), text: '' };
-    return { thoughts: '', text: raw };
-  }
-  async function localGenerate(o) {
-    var sess = o.noChat ? null : state.session;
-    var base = str(S.localUrl || 'http://localhost:11434').trim().replace(/\/+$/, '').replace(/\/v1$/, '');
-    var model = str(S.localModel || 'qwen3.5:9b').trim();
-    var notes = [];
-    var contents = await o.buildContents({ thinking: false, search: false, code: false, altJson: false, retried: false, reupload: false, notes: notes });
-    var tlevel = o.thinking || S.thinking; if (tlevel !== 'low' && tlevel !== 'high') tlevel = 'medium';
-    var body = { model: model, stream: true, stream_options: { include_usage: true }, reasoning_effort: tlevel, messages: toOpenAI(o.system, contents, notes) };
-    if (o.schema) body.response_format = { type: 'json_schema', json_schema: { name: 'out', schema: o.schema } };
-    var acc = newAcc(), raw = '', reasoning = '';
-    try {
-      try {
-        await streamGenerate(model, body, o.signal, function (obj) {
-          var ch = obj.choices && obj.choices[0], d = (ch && ch.delta) || {};
-          if (obj.usage) acc.usage = { promptTokenCount: obj.usage.prompt_tokens || 0, candidatesTokenCount: obj.usage.completion_tokens || 0 };
-          reasoning += d.reasoning_content || d.reasoning || '';
-          raw += d.content || '';
-          if (ch && ch.finish_reason) acc.finishReason = ch.finish_reason === 'length' ? 'MAX_TOKENS' : 'STOP';
-          var sp = splitThink(raw);
-          acc.thoughts = reasoning + sp.thoughts; acc.text = sp.text;
-          if (o.onUpdate) o.onUpdate(acc);
-        }, { url: base + '/v1/chat/completions', headers: { 'Content-Type': 'application/json' } });
-      } finally { if (acc.usage) { acc.bd = usageBreakdown(o.system, contents, acc.usage); recordUsage(model, acc.usage, sess, o.label, acc.bd, tlevel); } }
-    } catch (e) { e.acc = acc; throw e; }
-    acc.notes = notes; acc.model = model; acc.level = null;
-    return acc;
-  }
-
   /*
    * One generation with automatic recovery:
    * drops unsupported options (thinking level, search, code execution, JSON field style),
    * re-uploads expired files, and retries once when Google's servers are busy.
    */
   async function gemini(o) {
-    if (S.provider === 'local') return localGenerate(o);
+    if (isLocal(o.model || S.model)) return localGenerate(o);
     var sess = o.noChat ? null : state.session; // the chat this request belongs to, even if the user switches chats meanwhile (null = not part of any chat)
     var flags = { thinking: true, search: !!o.search && searchUsable(), code: !!o.code, altJson: false, retried: false, reupload: false, notes: [] };
     for (var attempt = 0; attempt < 6; attempt++) {
@@ -920,13 +879,113 @@
     throw apiError('http', 'too many retries');
   }
 
+  // ---------- Local model through Ollama (3.3.3) ----------
+  async function localFetch(path, init, ms) {
+    var ctl = new AbortController(), t = ms ? setTimeout(function () { ctl.abort(); }, ms) : null;
+    if (init && init.signal) init.signal.addEventListener('abort', function () { ctl.abort(); });
+    try { return await fetch(localBase() + path, Object.assign({}, init, { signal: ctl.signal })); }
+    finally { if (t) clearTimeout(t); }
+  }
+  function verLess(a, b) { var x = str(a).split('.'), y = str(b).split('.'); for (var i = 0; i < 3; i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d < 0; } return false; }
+  async function localProbe() {
+    var res = await localFetch('/api/tags', {}, 5000);
+    if (!res.ok) throw apiError('local', 'HTTP ' + res.status);
+    var data = await res.json(), ver = '';
+    try { ver = (await (await localFetch('/api/version', {}, 3000)).json()).version || ''; } catch (e) {}
+    var names = (data.models || []).map(function (m) { return str(m.name || m.model); }).filter(function (n) { return n && !/embed/i.test(n); });
+    return { names: names, version: ver };
+  }
+  // Gemini-style contents -> Ollama messages. Images go through (Qwen 3.5 sees them); PDFs and other binaries cannot.
+  function toOllama(system, contents, flags) {
+    var msgs = [{ role: 'system', content: system + '\n\n[Runtime] You are a local model: you cannot run code or search the web here. Work calculations out carefully by hand, double-check numbers, and never claim you ran code or searched.' }];
+    var skipped = 0;
+    contents.forEach(function (c) {
+      var text = [], images = [];
+      (c.parts || []).forEach(function (p) {
+        if (typeof p.text === 'string') text.push(p.text);
+        else if (p.inlineData && /^image\//.test(p.inlineData.mimeType)) images.push(p.inlineData.data);
+        else if (p.inlineData || p.fileData) { skipped++; text.push('[ไฟล์แนบนี้ส่งให้โมเดลในเครื่องไม่ได้ จึงไม่มีเนื้อหาให้อ่าน ห้ามเดาเนื้อหา]'); }
+      });
+      var m = { role: c.role === 'model' ? 'assistant' : 'user', content: text.join('\n\n') };
+      if (images.length) m.images = images;
+      if (m.content || m.images) msgs.push(m);
+    });
+    if (skipped) flags.notes.push('โมเดลในเครื่องอ่านไฟล์ PDF หรือไฟล์ที่ไม่ใช่รูปไม่ได้ (ข้ามไป ' + skipped + ' ไฟล์) ลองวางข้อความหรือถ่ายรูปหน้านั้นแทน');
+    return msgs;
+  }
+  async function streamOllama(body, signal, acc, onUpdate) {
+    var res;
+    try { res = await localFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: signal }); }
+    catch (e) { if (e && e.name === 'AbortError') throw apiError('cancelled'); throw apiError('local_down', String(e && e.message || e)); }
+    if (!res.ok) {
+      var eb = null; try { eb = await res.json(); } catch (x) {}
+      var em = str(eb && eb.error) || ('HTTP ' + res.status);
+      throw apiError(res.status === 404 ? 'local_nomodel' : 'local', em, { http: res.status, apiMessage: em, model: body.model });
+    }
+    var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
+    function line(l) {
+      l = l.trim(); if (!l) return;
+      var j; try { j = JSON.parse(l); } catch (e) { return; }
+      if (j.error) throw apiError('local', str(j.error), { apiMessage: str(j.error), model: body.model });
+      var m = j.message || {};
+      if (m.thinking) acc.thoughts += m.thinking;
+      if (m.content) acc.text += m.content;
+      if (j.done) {
+        // Ollama's eval_count includes the thinking tokens; split them by text share (an estimate)
+        var ev = j.eval_count || 0, all = acc.thoughts.length + acc.text.length, th = all ? Math.round(ev * acc.thoughts.length / all) : 0;
+        acc.finishReason = j.done_reason === 'length' ? 'MAX_TOKENS' : 'STOP';
+        acc.usage = { promptTokenCount: j.prompt_eval_count || 0, candidatesTokenCount: ev - th, thoughtsTokenCount: th };
+      }
+      if (onUpdate) onUpdate(acc);
+    }
+    try {
+      for (;;) {
+        var r = await reader.read();
+        if (r.done) break;
+        buf += dec.decode(r.value, { stream: true });
+        var i;
+        while ((i = buf.indexOf('\n')) >= 0) { line(buf.slice(0, i)); buf = buf.slice(i + 1); }
+      }
+      line(buf);
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw apiError('cancelled');
+      if (e && e.code) throw e;
+      throw apiError('local_down', String(e && e.message || e), { partial: true });
+    }
+  }
+  async function localGenerate(o) {
+    var sess = o.noChat ? null : state.session, useModel = o.model || S.model, name = useModel.slice(LOCAL_PREFIX.length);
+    var flags = { thinking: true, code: false, search: false, reupload: false, notes: [] };
+    var contents = await o.buildContents(flags);
+    var msgs = toOllama(o.system, contents, flags);
+    var tlevel = o.thinking || S.thinking; if (tlevel !== 'low' && tlevel !== 'high') tlevel = 'medium';
+    var useThink = tlevel !== 'low' && !o.schema; // ponytail: no thinking together with a JSON schema (some Ollama builds return empty text)
+    var ctx = S.local.ctx, acc = newAcc(), sendThink = true;
+    try {
+      for (var attempt = 0; attempt < 2; attempt++) {
+        var body = { model: name, messages: msgs, stream: true, options: { num_ctx: ctx } };
+        if (sendThink) body.think = useThink; // models without a thinking mode answer 400, then we retry without the field
+        if (o.schema) body.format = o.schema;
+        try { await streamOllama(body, o.signal, acc, o.onUpdate); break; }
+        catch (e) {
+          if (e.http === 400 && sendThink && /think/i.test(str(e.apiMessage))) { sendThink = false; continue; }
+          e.acc = acc; throw e;
+        }
+      }
+    } finally {
+      if (acc.usage) { acc.bd = usageBreakdown(o.system, contents, acc.usage); recordUsage(useModel, acc.usage, sess, o.label, acc.bd, tlevel); }
+    }
+    if (acc.usage && acc.usage.promptTokenCount >= ctx - 64) flags.notes.push('บทสนทนายาวเกินหน่วยความจำของโมเดลในเครื่อง (' + ctx + ' โทเค็น) ส่วนต้นอาจถูกตัดทิ้ง เปิดแชตใหม่ หรือเพิ่มค่านี้ที่ตั้งค่า > โมเดลในเครื่อง');
+    acc.notes = flags.notes; acc.model = useModel; acc.level = useThink ? tlevel : null;
+    return acc;
+  }
+
   function errorCopy(e) {
     var code = e && e.code;
     var msg = str(e && (e.apiMessage || e.message)).toLowerCase();
-    if (S.provider === 'local') {
-      if (code === 'network') return 'ต่อโมเดลในเครื่องไม่ได้ เช็กว่าเปิด Ollama หรือ LM Studio อยู่ ที่อยู่ในหน้าตั้งค่าถูกต้อง และอนุญาตให้เว็บนี้เรียกได้ (ตั้ง OLLAMA_ORIGINS)';
-      if (e && e.http === 404) return 'ไม่พบโมเดล "' + S.localModel + '" ในเครื่อง ลองสั่ง ollama pull ชื่อนี้ก่อน หรือแก้ชื่อในหน้าตั้งค่า';
-    }
+    if (code === 'local_down') return 'ต่อ Ollama ที่ ' + localBase() + ' ไม่ได้ กดปุ่มด้านล่างเพื่อตรวจ แอปจะบอกวิธีแก้ทีละขั้น';
+    if (code === 'local_nomodel') return 'ในเครื่องยังไม่มีโมเดล ' + str(e.model) + ' ติดตั้งโดยเปิด Command Prompt หรือ Terminal แล้วพิมพ์ ollama pull ' + str(e.model) + ' หรือเลือกโมเดลอื่นที่ติดตั้งแล้วในหน้าตั้งค่า';
+    if (code === 'local') return 'Ollama แจ้งว่า: ' + clip(e.message, 200);
     if (code === 'nokey') return 'ยังไม่ได้ใส่ API key ไปที่หน้า "ตั้งค่า" เพื่อใส่ก่อน';
     if (code === 'network') return 'เชื่อมต่ออินเทอร์เน็ตไม่ได้ ตรวจการเชื่อมต่อแล้วกด "ลองอีกครั้ง"';
     if (code === 'invalid_json') return 'พี่สาวส่งผลลัพธ์มาในรูปแบบที่แอปอ่านไม่ได้ กด "ลองอีกครั้ง"';
@@ -1200,7 +1259,7 @@
   }
   // the code tool adds tokens to every request, so it is switched off where it cannot help
   function codeAllowed(subject, level) {
-    if (!codeOn()) return false;
+    if (!S.codeExec) return false;
     if (subject === 'english' || subject === 'other') return false;
     if (level === 'low' && subject !== 'python') return false;
     return true;
@@ -1347,7 +1406,7 @@
     var lines = [
       TUTOR_PROMPT, '',
       '## App context (how this tutor app works)',
-      '- You are running inside my personal tutoring app "Unnie Study", powered by ' + (S.provider === 'local' ? 'a local open model (' + S.localModel + ')' : 'the Gemini API') + ', which I use on my phone and my computer. Today is ' + today + ' (Thailand).',
+      '- You are running inside my personal tutoring app "Unnie Study", powered by the Gemini API, which I use on my phone and my computer. Today is ' + today + ' (Thailand).',
       '- Files I attach (PDFs, photos, and Word, PowerPoint, or text files converted to text) come with my latest message. They are the project files in rule 1: base your teaching, summaries, and questions on them first, and cite the page or slide, for example [หน้า 12]. If a file is hard to read, say which part.',
       opts.code ? '- The code execution tool is the tool that rule 2 refers to: use it to verify every numeric result in math, physics, and chemistry, and to run Python code you show me. When a graph or diagram helps, you may plot it with matplotlib in code execution.' : '- No code execution tool is available right now. Work through every calculation step by step and double-check it.',
       opts.search ? '- Google Search is available for rule 4. Use it for anything time-sensitive about Thai university admissions, and mention the sources.' : '- There is no web search right now. For rule 4, tell me to check official sources such as mytcas.com.',
@@ -1525,7 +1584,7 @@
     L.push('ลองอธิบายสิ่งที่เพิ่งเรียนให้ตัวเองฟัง 1 นาที ช่วยให้จำได้ดีกว่าอ่านซ้ำ');
     if (state.log && state.log.length) L.push('ข้อที่เคยผิดคือขุมทรัพย์ ลองฝึกข้อที่เคยพลาดสัก 3 ข้อ');
     L.push('ถามทฤษฎี ถ่ายรูปโจทย์ หรือส่งชีทมาให้พี่สาวช่วยติวได้เลย');
-    if (codeOn()) L.push('พี่สาวรันโค้ดเช็กคำตอบให้ ตัวเลขจะไม่ผิดแน่');
+    if (S.codeExec) L.push('พี่สาวรันโค้ดเช็กคำตอบให้ ตัวเลขจะไม่ผิดแน่');
     return L;
   }
   var greetIdx = -1, greetTimer = 0;
@@ -1701,8 +1760,11 @@
     if (m.note) ex.appendChild(h('div', { class: 'note', text: m.note }));
     if (m.error) {
       ex.appendChild(h('div', { class: 'note bad', text: m.error }));
-      if (m.retryable && m === lastMessage()) ex.appendChild(h('div', { class: 'msg-actions' }, [h('button', { class: 'textbtn', type: 'button', text: 'ลองอีกครั้ง', onclick: retryLast })]));
-      else if (m.needsKey) ex.appendChild(h('div', { class: 'msg-actions' }, [h('button', { class: 'textbtn strong', type: 'button', text: 'ไปใส่ API key', onclick: function () { showView('settings'); } })]));
+      var acts = [];
+      if (m.retryable && m === lastMessage()) acts.push(h('button', { class: 'textbtn', type: 'button', text: 'ลองอีกครั้ง', onclick: retryLast }));
+      else if (m.needsKey) acts.push(h('button', { class: 'textbtn strong', type: 'button', text: 'ไปใส่ API key หรือเลือกโมเดลในเครื่อง', onclick: function () { showView('settings'); } }));
+      if (m.localFix) acts.push(h('button', { class: 'textbtn strong', type: 'button', text: 'ตรวจการเชื่อมต่อ Ollama', onclick: function () { showView('settings'); } }));
+      if (acts.length) ex.appendChild(h('div', { class: 'msg-actions' }, acts));
       return;
     }
     if (m.scope && m.scope.length && !m.kind) m.scope.forEach(function (s) { ex.appendChild(h('div', { class: 'note scope-note', text: s.skip ? 'รอบนี้ไม่ได้ส่งไฟล์ (' + s.why + ') · ' + clip(s.name, 40) : 'ส่งให้พี่สาวเฉพาะ' + s.unit + ' ' + fmtPages(s.pages) + ' จาก ' + s.total + ' (' + s.why + ') · ' + clip(s.name, 40) })); });
@@ -2045,7 +2107,7 @@
     return t;
   }
   function needKey(am) {
-    if (hasKey()) return false;
+    if (canAsk()) return false;
     am.local = true; am.needsKey = true; am.error = errorCopy({ code: 'nokey' });
     return true;
   }
@@ -2053,6 +2115,7 @@
     if (e.code === 'cancelled') { if (e.acc && e.acc.text && !am.kind) am.content = e.acc.text; am.note = 'หยุดแล้ว'; return; }
     if (e.acc && e.acc.text && !am.kind) { am.content = e.acc.text; }
     am.error = errorCopy(e);
+    am.localFix = str(e.code).indexOf('local') === 0;
     am.retryable = !(e.code === 'too_large' || e.code === 'blocked' || e.code === 'nokey');
   }
 
@@ -2104,7 +2167,7 @@
       if (gen.full) am.gen.full = true;
       if (Object.keys(scope).length) { am.gen.scope = scope; am.scope = Object.keys(scope).map(function (k) { return scope[k]; }); }
       setStatus(node, '');
-      var tools = { code: codeAllowed(subj, level) || (!!gen.deep && codeOn() && subj !== 'english' && subj !== 'other'), search: searchUsable(), deep: !!gen.deep, ch: chId };
+      var tools = { code: codeAllowed(subj, level) || (!!gen.deep && S.codeExec && subj !== 'english' && subj !== 'other'), search: searchUsable(), deep: !!gen.deep, ch: chId };
       var useModel = (gen.deep && S.deepModel) ? S.deepModel : S.model;
       var callModel = function (mdl) {
         return gemini({
@@ -2162,7 +2225,7 @@
     var unscope = scopeMaterials(o.only);
     try {
       if (needKey(am)) return;
-      var tools = { code: codeOn(), search: false, ch: chId };
+      var tools = { code: S.codeExec, search: false, ch: chId };
       var acc = await gemini({
         system: buildSystem(tools), code: tools.code, search: false, signal: ctl.signal, thinking: 'high',
         schema: id === 'quiz' ? QUIZ_SCHEMA : CARDS_SCHEMA,
@@ -3357,7 +3420,7 @@
   async function sendPlan(text) {
     text = str(text).trim();
     if (!text || planBusy) return;
-    if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
     var P = state.planner;
     P.chat.push({ role: 'user', content: text, ts: Date.now() });
     var am = { role: 'assistant', content: '', ts: Date.now() };
@@ -3816,7 +3879,7 @@
     }
     askBtn.addEventListener('click', async function () {
       if (moodBusy) return;
-      if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+      if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
       var n = 0, k0 = dayKey(); for (var i = 0; i < 7; i++) if (state.mood[addDays(k0, -i)]) n++;
       if (!n) { showToast('เช็กอินอย่างน้อย 1 วันก่อน พี่สาวจะได้มีข้อมูลให้ดู'); return; }
       moodBusy = true; askBtn.disabled = true; askBtn.textContent = 'พี่สาวกำลังอ่านข้อมูล…'; sumErr.textContent = '';
@@ -3886,7 +3949,7 @@
   function simTopic(it, hard) { return (hard ? 'ข้อที่ยากขึ้นจากเรื่อง ' : 'ข้อคล้ายกับโจทย์นี้ เรื่อง ') + (it.topic || '') + (it.sub ? ' › ' + it.sub : '') + ': ' + clip(it.q, 160); }
   async function analyzeEntry(it, btn) {
     if (nbBusy) return;
-    if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
     nbBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังวิเคราะห์…';
     try {
       var schema = { type: 'object', properties: { why: { type: 'string' }, error_type: { type: 'string', enum: ['concept', 'recall', 'calc', 'read', 'careless'] }, principle: { type: 'string' }, technique: { type: 'string' } }, required: ['why', 'error_type', 'principle'] };
@@ -4078,7 +4141,7 @@
   function pEmoji(p) { return p === null ? '⚪' : p >= 80 ? '🟢' : p >= 60 ? '🟡' : '🔴'; }
   async function genSkeleton(s, btn) {
     if (msBusy) return;
-    if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
     msBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังร่างหัวข้อ…';
     try {
       var en = (SUBJECTS.filter(function (x) { return x.id === s; })[0] || {}).en || s;
@@ -4262,7 +4325,7 @@
   }
   async function flashFromErrors() {
     if (fl.aiBusy) return;
-    if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
     var picks = state.errbook.filter(function (x) { return x.status === 'open' && fl.aiSel[x.id]; }).slice(0, 20);
     if (!picks.length) { showToast('เลือกข้อที่ผิดอย่างน้อย 1 ข้อ'); return; }
     fl.aiBusy = true; renderFlash();
@@ -4579,7 +4642,7 @@
   var kmKeep = { id: '', l: 0, t: 0 };
   async function genLinks(all, btn) {
     if (kmBusy) return;
-    if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
     var names = all.filter(function (n) { return n.kind !== 'root'; }).map(function (n) { return n.n; });
     if (names.length < 3) { showToast('ยังมีหัวข้อน้อยเกินไป'); return; }
     kmBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังร่างเส้นเชื่อม…';
@@ -4807,27 +4870,80 @@
     ]));
   }
 
+  // Local model panel (settings + first start): check Ollama, list installed models, pick one with a tap
+  function buildLocalPanel(box, onChange, auto) {
+    box.innerHTML = '';
+    function copyBtn(t) { return h('button', { class: 'textbtn', type: 'button', text: 'คัดลอก', onclick: function () { (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { showToast('คัดลอกแล้ว'); }, function () { showToast('คัดลอกไม่ได้ ลากคลุมข้อความแล้วคัดลอกเอง'); }); } }); }
+    function cmd(t) { return h('div', { class: 'lm-cmd' }, [h('code', { text: t }), copyBtn(t)]); }
+    box.appendChild(h('p', { class: 'muted', html: 'รันโมเดลบนเครื่องของคุณเองผ่าน <a href="https://ollama.com/download" target="_blank" rel="noopener">Ollama</a> ไม่ต้องมี API key และข้อความไม่ออกจากเครื่อง ข้อจำกัด: ค้นเว็บและรันโค้ดตรวจคำตอบไม่ได้ อ่านไฟล์ PDF ไม่ได้ (รูปและข้อความอ่านได้) ตัวเลขสำคัญควรตรวจซ้ำเอง และเครื่องที่ไม่มีการ์ดจอจะตอบช้า' }));
+    var url = h('input', { class: 'text', type: 'text', value: S.local.url, spellcheck: 'false', autocomplete: 'off', 'aria-label': 'ที่อยู่ Ollama' });
+    var go = h('button', { class: 'primary', type: 'button', text: 'ตรวจการเชื่อมต่อและโหลดรายการโมเดล' });
+    var status = h('div', { class: 'muted' });
+    var out = h('div');
+    var ctxSel = h('select', { class: 'text', 'aria-label': 'หน่วยความจำต่อคำขอ' }, [[8192, '8K เบา ประหยัดแรม'], [16384, '16K แนะนำ'], [32768, '32K ไฟล์ยาว กินแรมเพิ่ม']].map(function (c) { return h('option', { value: c[0], text: c[1], selected: c[0] === S.local.ctx }); }));
+    ctxSel.addEventListener('change', function () { S.local.ctx = +ctxSel.value; saveSettings(); if (onChange) onChange(); });
+    box.appendChild(h('div', { class: 'field' }, [h('label', { text: 'ที่อยู่ Ollama (ปกติไม่ต้องแก้)' }), url]));
+    box.appendChild(h('div', { class: 'row' }, [go]));
+    box.appendChild(status);
+    box.appendChild(out);
+    box.appendChild(h('div', { class: 'field', style: 'margin-top:12px' }, [h('label', { text: 'หน่วยความจำต่อคำขอ (ถ้าแชตยาวแล้วโมเดลลืมต้นเรื่อง ให้เพิ่ม)' }), ctxSel]));
+
+    function paintModels(r) {
+      out.innerHTML = '';
+      if (r.version && verLess(r.version, LOCAL_MIN_VER)) out.appendChild(h('p', { class: 'badline', html: 'Ollama รุ่น ' + escapeHtml(r.version) + ' เก่าเกินไปสำหรับ Qwen 3.5 (ต้อง ' + LOCAL_MIN_VER + ' ขึ้นไป) อัปเดตที่ <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a>' }));
+      var list = h('div', { class: 'lm-list' });
+      r.names.forEach(function (n) {
+        var on = S.model === LOCAL_PREFIX + n;
+        list.appendChild(h('div', { class: 'lm-item' + (on ? ' on' : '') }, [h('b', { text: n }), h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () {
+          S.model = LOCAL_PREFIX + n; saveSettings(); paintModels(r); if (onChange) onChange(); showToast('ใช้ ' + n + ' แล้ว พิมพ์ถามพี่สาวได้เลย');
+        } })]));
+      });
+      if (r.names.length) out.appendChild(list);
+      if (r.names.indexOf(LOCAL_DEFAULT_NAME) < 0) {
+        out.appendChild(h('p', { class: 'muted', text: (r.names.length ? '' : 'ยังไม่มีโมเดลในเครื่องเลย ') + 'ยังไม่มี ' + LOCAL_DEFAULT_NAME + ' (ขนาดราว 6.6 GB) ติดตั้งโดยเปิด Command Prompt หรือ Terminal แล้วพิมพ์:' }));
+        out.appendChild(cmd('ollama pull ' + LOCAL_DEFAULT_NAME));
+        out.appendChild(h('p', { class: 'muted', text: 'ดาวน์โหลดเสร็จแล้วกดปุ่ม "ตรวจการเชื่อมต่อ" อีกครั้ง' }));
+      }
+    }
+    function paintHelp() {
+      var base = localBase(), here = (location.protocol === 'file:' || location.origin === 'null') ? '*' : location.origin;
+      var onLocalhost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      var li = [h('li', { html: '<b>Ollama เปิดอยู่ไหม</b> เปิดแอป Ollama (ไอคอนตัวลามะที่ถาดระบบ) แล้วลองเปิด <a href="' + escapeHtml(base) + '" target="_blank" rel="noopener">' + escapeHtml(base) + '</a> ถ้าขึ้นว่า "Ollama is running" แปลว่าเปิดอยู่แล้ว ไปข้อถัดไป' })];
+      if (onLocalhost) li.push(h('li', { html: '<b>ที่อยู่ถูกไหม</b> หน้านี้เปิดจาก localhost อยู่แล้ว จึงไม่ต้องตั้ง OLLAMA_ORIGINS ตรวจว่าช่อง "ที่อยู่ Ollama" ด้านบนตรงกับที่ Ollama ใช้จริง (ปกติคือ http://localhost:11434)' }));
+      else {
+        li.push(h('li', null, [h('b', { text: 'อนุญาตให้เว็บนี้เรียก Ollama ' }), 'นี่คือสาเหตุที่พบบ่อยที่สุดของข้อความ "ต่อโมเดลในเครื่องไม่ได้" ต้องบอก Ollama ว่าเว็บ ' + here + ' เรียกใช้ได้ (OLLAMA_ORIGINS)',
+          h('div', { class: 'lm-os', text: 'Windows (เปิด Command Prompt แล้วพิมพ์)' }), cmd('setx OLLAMA_ORIGINS "' + here + '"'),
+          h('div', { class: 'lm-os', text: 'Mac (เปิด Terminal แล้วพิมพ์)' }), cmd('launchctl setenv OLLAMA_ORIGINS "' + here + '"'),
+          h('div', { class: 'lm-os', text: 'Linux (พิมพ์ sudo systemctl edit ollama แล้วใส่สองบรรทัดนี้ จากนั้นพิมพ์ sudo systemctl restart ollama)' }), cmd('[Service]\nEnvironment="OLLAMA_ORIGINS=' + here + '"'),
+          h('div', { class: 'lm-os', text: 'จากนั้นปิด Ollama ให้สนิท (คลิกขวาที่ไอคอน > Quit) แล้วเปิดใหม่ ค่าถึงจะมีผล แล้วกดตรวจอีกครั้ง' })]));
+      }
+      li.push(h('li', { html: '<b>สิทธิ์ของเบราว์เซอร์</b> Chrome และ Edge จะเด้งถามสิทธิ์เชื่อมต่ออุปกรณ์ในเครือข่ายภายใน (Local network access) ต้องกดอนุญาต ถ้าเคยกดบล็อก ให้คลิกไอคอนแม่กุญแจข้างช่องที่อยู่เว็บ > การตั้งค่าไซต์ แล้วเปลี่ยนสิทธิ์นั้นเป็นอนุญาต ส่วน Safari มักบล็อกหน้า https ที่เรียก Ollama ในเครื่อง ให้ใช้ Chrome หรือ Firefox' }));
+      if (!onLocalhost) li.push(h('li', { html: '<b>ทางลัดที่ไม่ต้องตั้งอะไร</b> ดับเบิลคลิก <code>start-local.bat</code> ในไฟล์ zip (ต้องมี Python) แล้วใช้แอปที่ http://localhost:8080 แทน เพราะ Ollama อนุญาตหน้าที่เปิดจาก localhost อยู่แล้ว แชตเดิมบนเว็บจะไม่ตามมาเอง ใช้ปุ่ม "สำรองข้อมูลเป็นไฟล์" ที่เว็บเดิม แล้วนำเข้าที่ localhost' }));
+      out.innerHTML = '';
+      out.appendChild(h('div', { class: 'lm-help' }, [h('b', { text: 'ต่อ Ollama ไม่ได้ ลองทีละข้อ' }), h('ol', null, li)]));
+    }
+    async function check() {
+      S.local.url = url.value.trim() || 'http://localhost:11434'; saveSettings();
+      go.disabled = true; status.className = 'muted'; status.textContent = 'กำลังตรวจ…'; out.innerHTML = '';
+      try {
+        var r = await localProbe();
+        S.local.models = r.names; saveSettings();
+        status.className = 'okline'; status.textContent = 'ต่อ Ollama ได้แล้ว' + (r.version ? ' (รุ่น ' + r.version + ')' : '') + ' พบโมเดลในเครื่อง ' + r.names.length + ' ตัว';
+        paintModels(r);
+      } catch (e) { status.className = 'badline'; status.textContent = 'ต่อ Ollama ไม่ได้'; paintHelp(); }
+      go.disabled = false;
+      if (onChange) onChange();
+    }
+    go.addEventListener('click', check);
+    if (auto) check();
+  }
+
   // Settings
   function renderSettings() {
     var root = $('settings-root'); root.innerHTML = '';
     root.appendChild(h('h1', { class: 'page-title', text: 'ตั้งค่า' }));
 
-    root.appendChild(h('h2', { class: 'section-title', text: 'สมอง AI' }));
-    var provSel = h('select', { class: 'text', 'aria-label': 'เลือกสมอง AI', onchange: function () { S.provider = provSel.value; saveSettings(); renderSettings(); } }, [
-      h('option', { value: 'gemini', text: 'Gemini (ผ่านอินเทอร์เน็ต)' }),
-      h('option', { value: 'local', text: 'โมเดลในเครื่อง (Qwen ผ่าน Ollama / LM Studio / llama.cpp)' })
-    ]);
-    provSel.value = S.provider === 'local' ? 'local' : 'gemini';
-    root.appendChild(provSel);
-    if (S.provider === 'local') {
-      var urlIn = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'ที่อยู่เซิร์ฟเวอร์', value: S.localUrl || 'http://localhost:11434', onchange: function () { S.localUrl = urlIn.value.trim(); saveSettings(); } });
-      var mdlIn = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'ชื่อโมเดล', placeholder: 'qwen3.5:9b', value: S.localModel || 'qwen3.5:9b', onchange: function () { S.localModel = mdlIn.value.trim(); saveSettings(); } });
-      root.appendChild(h('div', { class: 'field' }, [h('label', { text: 'ที่อยู่เซิร์ฟเวอร์ (Ollama ปกติคือ http://localhost:11434)' }), urlIn]));
-      root.appendChild(h('div', { class: 'field' }, [h('label', { text: 'ชื่อโมเดลตามที่เซิร์ฟเวอร์ใช้ (เช่น qwen3.5:9b)' }), mdlIn]));
-      root.appendChild(h('p', { class: 'muted', text: 'ตั้ง OLLAMA_ORIGINS ให้อนุญาตเว็บนี้ และ OLLAMA_CONTEXT_LENGTH อย่างน้อย 16384 แล้วเปิด Ollama ก่อนใช้ โหมดนี้ใช้ได้กับข้อความและรูปภาพ ยังไม่รันโค้ด ไม่ค้นเว็บ และไม่อ่าน PDF ข้อมูลไม่ออกจากเครื่องคุณ' }));
-    }
-
-    root.appendChild(h('h2', { class: 'section-title', text: 'Gemini API key' }));
+    root.appendChild(h('h2', { class: 'section-title', text: 'Gemini API key (ไม่ต้องใส่ถ้าใช้โมเดลในเครื่อง)' }));
     root.appendChild(h('p', { class: 'muted', html: 'สร้าง key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> key จะเก็บไว้ในเครื่องนี้เท่านั้น และส่งไปที่ Google ตอนถามพี่สาวเท่านั้น' }));
     var keyInput = h('input', { class: 'text', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'วาง API key ที่นี่', value: S.apiKey });
     var show = h('button', { class: 'textbtn', type: 'button', text: 'แสดง', onclick: function () { keyInput.type = keyInput.type === 'password' ? 'text' : 'password'; show.textContent = keyInput.type === 'password' ? 'แสดง' : 'ซ่อน'; } });
@@ -4847,13 +4963,16 @@
     root.appendChild(h('div', { class: 'keyrow' }, [keyInput, show]));
     root.appendChild(h('div', { class: 'row' }, [saveKey, keyStatus]));
 
+    root.appendChild(h('h2', { class: 'section-title', text: 'โมเดลในเครื่อง (Ollama)' }));
+    var localBox = h('div');
+    root.appendChild(localBox);
     root.appendChild(h('h2', { class: 'section-title', text: 'โมเดล' }));
     var modelBox = h('div');
     root.appendChild(modelBox);
     function tokShort(n) { return n >= 1e6 ? '≈ ' + String(Math.round(n / 1e5) / 10) + ' ล้านโทเค็น' : '≈ ' + Math.round(n / 1000).toLocaleString('en-US') + 'K โทเค็น'; }
     function renderModelSelect() {
       modelBox.innerHTML = '';
-      var list = (S.models && S.models.length ? S.models : FALLBACK_MODELS).slice();
+      var list = allModels();
       if (!list.some(function (m) { return m.id === S.model; })) list.unshift({ id: S.model, label: S.model });
       var sel = h('select', { class: 'text', 'aria-label': 'เลือกโมเดล' });
       list.forEach(function (m) { var op = h('option', { value: m.id, text: m.label }); if (m.id === S.model) op.selected = true; sel.appendChild(op); });
@@ -4866,7 +4985,7 @@
         var row = function (k, v, extra) { return h('div', { class: 'mc-row' }, [h('span', { class: 'k', text: k }), h('span', { class: 'v', text: v })].concat(extra || [])); };
         var bar = function (pct) { return h('div', { class: 'mc-bar', role: 'presentation' }, [h('i', { style: 'width:' + Math.min(100, Math.max(0, pct)) + '%' + (pct >= 90 ? ';background:var(--danger)' : '') })]); };
         var card = h('div', { class: 'model-card' });
-        if (m.inTok || m.outTok) card.appendChild(h('div', { class: 'mc-max' }, [cell('Input สูงสุด (รับเข้า)', m.inTok), cell('Output สูงสุด (ตอบออก)', m.outTok)]));
+        if (m.inTok || m.outTok) card.appendChild(h('div', { class: 'mc-max' }, [cell(m.local ? 'ความจำต่อคำขอ (ตั้งได้ที่ โมเดลในเครื่อง)' : 'Input สูงสุด (รับเข้า)', m.inTok), m.outTok ? cell('Output สูงสุด (ตอบออก)', m.outTok) : null]));
         else card.appendChild(h('p', { class: 'muted mc-note', text: S.apiKey ? 'ไม่พบข้อมูลโทเค็นสูงสุดของรุ่นนี้ กด "บันทึกและตรวจสอบ" ด้านบนอีกครั้งเพื่อโหลดรายการล่าสุด' : 'ใส่ API key แล้วกด "บันทึกและตรวจสอบ" เพื่อดูโทเค็นสูงสุดของแต่ละรุ่น' }));
 
         var u = (U.days[quotaDay()] || {})[sel.value] || { i: 0, o: 0, n: 0 }, used = u.i + u.o;
@@ -4936,6 +5055,7 @@
       modelBox.appendChild(h('p', { class: 'muted', text: 'รุ่น Flash ใช้ฟรีได้ภายในโควตาต่อนาทีและต่อวัน รุ่น Pro ต้องเปิดใช้แบบเสียเงินใน Google AI Studio' }));
     }
     renderModelSelect();
+    buildLocalPanel(localBox, function () { if (modelBox.isConnected) renderModelSelect(); }, isLocal(S.model));
     // รายการโมเดลที่เก็บไว้จากเวอร์ชันเก่าไม่มีข้อมูลโทเค็น โหลดใหม่ให้เงียบๆ
     if (S.apiKey && S.models && S.models.length && !S.models.some(function (m) { return m.inTok; })) {
       listModels(S.apiKey).then(function (models) { if (models.length) { S.models = models; saveSettings(); if (modelBox.isConnected) renderModelSelect(); } }).catch(function () {});
@@ -4949,7 +5069,7 @@
     root.appendChild(segControl([{ label: 'อัตโนมัติ', value: 'auto' }, { label: 'เร็ว', value: 'low' }, { label: 'สมดุล', value: 'medium' }, { label: 'คิดลึก', value: 'high' }], S.thinking, function (v) { S.thinking = v; saveSettings(); thinkBox.paint(); }));
     root.appendChild(thinkBox);
     root.appendChild(h('p', { class: 'muted', style: 'margin-top:14px', text: 'ปุ่ม "คิดลึกข้อนี้" ใต้คำตอบจะถามซ้ำโดยคิดให้ลึกที่สุดและรันโค้ดตรวจ เลือกรุ่นที่ใช้ตอนกดปุ่มนี้ได้ (รุ่น Pro อาจต้องเปิดใช้แบบเสียเงิน ถ้าใช้ไม่ได้แอปจะใช้รุ่นปกติแทน)' }));
-    var deepList = (S.models && S.models.length ? S.models : FALLBACK_MODELS).slice();
+    var deepList = allModels();
     var deepSel = h('select', { class: 'text', 'aria-label': 'รุ่นที่ใช้ตอนกดคิดลึกข้อนี้' }, [h('option', { value: '', text: 'รุ่นเดียวกับที่ใช้คุย (คิดสูงสุด)', selected: !S.deepModel })].concat(deepList.map(function (mm) { return h('option', { value: mm.id, text: mm.label, selected: mm.id === S.deepModel }); })));
     deepSel.addEventListener('change', function () { S.deepModel = deepSel.value; saveSettings(); showToast(S.deepModel ? 'ปุ่มคิดลึกจะใช้ ' + S.deepModel : 'ปุ่มคิดลึกจะใช้รุ่นเดียวกับที่ใช้คุย'); });
     root.appendChild(deepSel);
@@ -5111,7 +5231,7 @@
   async function pzLearn() {
     var P = PZ();
     if (pzBusy) return;
-    if (!hasKey()) { showToast('ยังไม่ได้ใส่ API key ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
     var msgs = state.session.messages.filter(function (m) { return !m.local && m.kind !== 'summary' && str(m.content).trim(); });
     if (msgs.length < 2) { showToast('เรียนกับพี่สาวสักพักก่อน แล้วค่อยให้จดนะ'); return; }
     var convo = msgs.slice(-16).map(function (m) { return (m.role === 'user' ? 'Student: ' : 'Tutor: ') + clip(str(m.content).replace(/\s+/g, ' '), 500); }).join('\n');
@@ -6255,7 +6375,7 @@
     var ob = $('onboard'); ob.innerHTML = ''; ob.hidden = false;
     var inner = h('div', { class: 'ob-inner' });
     inner.appendChild(h('h1', { class: 'ob-title', html: 'Unnie Study<br><mark>พี่สาวคนโต</mark> ที่อยู่ในมือถือ' }));
-    inner.appendChild(h('p', { class: 'page-lead', text: 'สอนคณิต ฟิสิกส์ เคมี ชีวะ อังกฤษ และ Python อ่านชีทให้ ออกข้อสอบ ทำบัตรคำ และจำจุดอ่อนของคุณ ใช้สมองของ Gemini ผ่าน API key ของคุณเอง' }));
+    inner.appendChild(h('p', { class: 'page-lead', text: 'สอนคณิต ฟิสิกส์ เคมี ชีวะ อังกฤษ และ Python อ่านชีทให้ ออกข้อสอบ ทำบัตรคำ และจำจุดอ่อนของคุณ ใช้สมองของ Gemini ผ่าน API key ของคุณเอง หรือรันโมเดลในเครื่องผ่าน Ollama' }));
     var s1 = h('div', { class: 'ob-step' }, [h('h2', { text: 'ขั้นที่ 1 รับ API key ฟรี' }), h('ol', null, [
       h('li', { html: 'เปิด <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> แล้วล็อกอินด้วยบัญชี Google' }),
       h('li', { text: 'กด Create API key แล้วคัดลอก key ที่ได้' }),
@@ -6269,7 +6389,15 @@
     inner.appendChild(s2);
     var s3 = h('div', { class: 'ob-step', hidden: true });
     inner.appendChild(s3);
-    inner.appendChild(h('div', { class: 'row' }, [h('button', { class: 'textbtn', type: 'button', text: 'หรือใช้โมเดลในเครื่อง (Qwen) แทน ตั้งค่าต่อในหน้าตั้งค่า', onclick: function () { S.provider = 'local'; saveSettings(); s3.hidden = false; renderProfileStep(s3); } })]));
+    var localBtn = h('button', { class: 'textbtn strong', type: 'button', text: 'ไม่มี key? ใช้โมเดลในเครื่อง (Ollama) แทน' });
+    var s2b = h('div', { class: 'ob-step', hidden: true });
+    localBtn.addEventListener('click', function () {
+      S.model = LOCAL_PREFIX + LOCAL_DEFAULT_NAME; saveSettings();
+      buildLocalPanel(s2b, null, true); s2b.insertBefore(h('h2', { text: 'ใช้โมเดลในเครื่อง' }), s2b.firstChild);
+      s2b.hidden = false; s3.hidden = false; renderProfileStep(s3);
+    });
+    inner.insertBefore(h('div', { class: 'row' }, [localBtn]), s3);
+    inner.insertBefore(s2b, s3);
     go.addEventListener('click', async function () {
       var k = keyIn.value.trim();
       if (!k) { st.className = 'badline'; st.textContent = 'ยังไม่ได้วาง key'; return; }
@@ -6313,7 +6441,7 @@
   applyTheme();
   renderSubjects(); renderQuick(); renderMatChips(); updateTitle(); renderAll(); updateComposer();
   showView('chat');
-  if (!hasKey()) renderOnboarding();
+  if (!canAsk()) renderOnboarding();
 
   async function refreshStreak() {
     var byDay = {};

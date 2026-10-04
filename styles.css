@@ -1326,3 +1326,13 @@ textarea.text.pz-goals { min-height: 110px; }
 #personalized-root .cx .sug { border-color: var(--btn); }
 #personalized-root .cx .sws + .row { margin-top: 2px; }
 .msg.assistant .who { transition: none; }
+/* 3.3.3: local model (Ollama) panel */
+.lm-list { display: grid; gap: 6px; margin: 10px 0; }
+.lm-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.lm-item.on { border-color: var(--ok); }
+.lm-item b { font-weight: 600; word-break: break-all; }
+.lm-help { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 12px 16px; margin-top: 10px; font-size: .92rem; }
+.lm-help ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 12px; }
+.lm-os { margin: 8px 0 4px; color: var(--ink-soft); font-size: .85rem; }
+.lm-cmd { display: flex; gap: 8px; align-items: flex-start; }
+.lm-cmd code { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
