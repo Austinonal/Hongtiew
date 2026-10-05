@@ -1336,3 +1336,4 @@ textarea.text.pz-goals { min-height: 110px; }
 .lm-os { margin: 8px 0 4px; color: var(--ink-soft); font-size: .85rem; }
 .lm-cmd { display: flex; gap: 8px; align-items: flex-start; }
 .lm-cmd code { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+.lm-item > button { white-space: nowrap; flex-shrink: 0; }

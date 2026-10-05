@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '3.3.3';
+  var VERSION = '3.3.4';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
@@ -16,6 +16,22 @@
   var LOCAL_PREFIX = 'ollama:'; // model ids that start with this run on your own computer through Ollama
   var LOCAL_DEFAULT_NAME = 'qwen3.5:9b';
   var LOCAL_MIN_VER = '0.17.1'; // Qwen 3.5 needs this Ollama version or newer
+  // 3.3.4: the same Qwen 3.5 9B, but run on OpenRouter's servers so your computer does not do the work (no heat, no 6.6 GB download)
+  var CLOUD_PREFIX = 'or:';
+  var CLOUD_API = 'https://openrouter.ai/api/v1';
+  var CLOUD_DEFAULT_NAME = 'qwen/qwen3.5-9b';
+  var CLOUD_PRESETS = [
+    { id: 'qwen/qwen3.5-9b', name: 'Qwen 3.5 9B', note: 'เสียเงิน (ตัดจากเครดิต) รุ่นเดียวกับใน Ollama อ่านรูปได้ ราว 3–5 บาทต่อล้านโทเค็น', ctx: 262144 }
+  ];
+  // 3.3.4: Groq's free plan (no credit card). Free-plan caps per model: 30 requests/min, 1,000 requests/day, 8,000 tokens/min, 200,000 tokens/day
+  var GROQ_PREFIX = 'gq:';
+  var GROQ_API = 'https://api.groq.com/openai/v1';
+  var GROQ_DEFAULT_NAME = 'qwen/qwen3.8-27b';
+  var GROQ_TPM = 8000, GROQ_TPD = 200000, GROQ_RPD = 1000;
+  var GROQ_PRESETS = [
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', note: 'แนะนำ ฟรี เก่งกว่า 9B · รุ่นทดลองของ Groq อาจถูกถอดได้ · อ่านรูปและ PDF ไม่ได้', ctx: 131072 },
+    { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B', note: 'ฟรี ตัวสำรองถ้า Qwen ใช้ไม่ได้ · อ่านรูปและ PDF ไม่ได้', ctx: 131072 }
+  ];
   var INLINE_MAX = 48 * 1024 * 1024;
   var FILE_API_MIN = 3.5 * 1024 * 1024;
   var FILE_TTL = 46 * 3600 * 1000;
@@ -197,24 +213,56 @@
   // ---------- settings ----------
   var SETTINGS_KEY = 'ht2:settings';
   var S = (function () {
-    var d = { apiKey: '', model: DEFAULT_MODEL, thinking: 'auto', deepModel: '', showTok: true, codeExec: true, search: true, theme: 'system', subject: 'all', models: null, searchBlockedAt: 0, fileApiFailAt: 0, onboarded: false, local: { url: 'http://localhost:11434', ctx: 16384, models: [] }, tb: { count: 10, level: 'exam', cards: 15, timed: false } };
+    var d = { apiKey: '', model: DEFAULT_MODEL, thinking: 'auto', deepModel: '', showTok: true, codeExec: true, search: true, theme: 'system', subject: 'all', models: null, searchBlockedAt: 0, fileApiFailAt: 0, onboarded: false, local: { url: 'http://localhost:11434', ctx: 16384, models: [], eco: true }, cloud: { key: '', models: [] }, groq: { key: '', models: [] }, tb: { count: 10, level: 'exam', cards: 15, timed: false } };
     try { var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); Object.keys(s).forEach(function (k) { d[k] = s[k]; }); } catch (e) {}
     if (!d.tb || typeof d.tb !== 'object') d.tb = { count: 10, level: 'exam', cards: 15, timed: false };
     if (!d.local || typeof d.local !== 'object') d.local = {};
     d.local.url = d.local.url || 'http://localhost:11434'; d.local.ctx = +d.local.ctx || 16384; if (!Array.isArray(d.local.models)) d.local.models = [];
+    if (typeof d.local.eco !== 'boolean') d.local.eco = true; // 3.3.4: "ถนอมเครื่อง" is on unless you turn it off
+    if (!d.cloud || typeof d.cloud !== 'object') d.cloud = {};
+    d.cloud.key = str(d.cloud.key); if (!Array.isArray(d.cloud.models)) d.cloud.models = [];
+    if (!d.groq || typeof d.groq !== 'object') d.groq = {};
+    d.groq.key = str(d.groq.key); if (!Array.isArray(d.groq.models)) d.groq.models = [];
     if (!d.v315) { d.v315 = 1; d.thinking = 'auto'; } // 3.1.5: thinking level is chosen automatically unless set again
     return d;
   })();
   function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch (e) {} }
   function isLocal(id) { return str(id).indexOf(LOCAL_PREFIX) === 0; }
-  function canAsk() { return !!S.apiKey || isLocal(S.model); } // a Gemini key OR a local model is enough to talk
+  function isCloud(id) { return str(id).indexOf(CLOUD_PREFIX) === 0; }
+  function isGroq(id) { return str(id).indexOf(GROQ_PREFIX) === 0; }
+  function isOpenModel(id) { return isLocal(id) || isCloud(id) || isGroq(id); } // not Gemini: no Google search, code execution or File API
+  function canAsk() { return !!S.apiKey || isLocal(S.model) || (isCloud(S.model) && !!S.cloud.key) || (isGroq(S.model) && !!S.groq.key); } // a Gemini key, a local model, or an OpenRouter / Groq key is enough to talk
+  // the two OpenAI-style cloud services share one code path
+  var PROVS = {
+    or: { id: 'or', name: 'OpenRouter', prefix: CLOUD_PREFIX, api: CLOUD_API, key: function () { return S.cloud.key; } },
+    gq: { id: 'gq', name: 'Groq', prefix: GROQ_PREFIX, api: GROQ_API, key: function () { return S.groq.key; } }
+  };
+  function provOf(id) { return isGroq(id) ? PROVS.gq : PROVS.or; }
+  function provName(e) { return (PROVS[e && e.prov] || PROVS.or).name; }
   function localBase() { return str(S.local.url).trim().replace(/\/+$/, '') || 'http://localhost:11434'; }
   function localModelList() {
     var names = S.local.models.slice();
     if (names.indexOf(LOCAL_DEFAULT_NAME) < 0) names.unshift(LOCAL_DEFAULT_NAME);
     return names.map(function (n) { return { id: LOCAL_PREFIX + n, label: '💻 ' + n + ' (ในเครื่อง ไม่ต้องใช้ key)', inTok: S.local.ctx, local: true }; });
   }
-  function allModels() { return (S.models && S.models.length ? S.models : FALLBACK_MODELS).concat(localModelList()); }
+  function cloudModelList() {
+    var ids = CLOUD_PRESETS.map(function (p) { return p.id; });
+    S.cloud.models.forEach(function (n) { if (n && ids.indexOf(n) < 0) ids.push(n); });
+    return ids.map(function (n) {
+      var p = CLOUD_PRESETS.filter(function (x) { return x.id === n; })[0];
+      return { id: CLOUD_PREFIX + n, label: '☁️ ' + (p ? p.name : n) + (/:free$/.test(n) ? ' (OpenRouter ฟรี จำกัดครั้งต่อวัน)' : ' (OpenRouter เสียเงินตามที่ใช้)'), inTok: p ? p.ctx : 0, cloud: true };
+    });
+  }
+  function groqModelList() {
+    var ids = GROQ_PRESETS.map(function (p) { return p.id; });
+    S.groq.models.forEach(function (n) { if (n && ids.indexOf(n) < 0) ids.push(n); });
+    return ids.map(function (n) {
+      var p = GROQ_PRESETS.filter(function (x) { return x.id === n; })[0];
+      return { id: GROQ_PREFIX + n, label: '🆓 ' + (p ? p.name : n) + ' (Groq ฟรี ไม่ผูกบัตร)', inTok: p ? p.ctx : 0, groq: true };
+    });
+  }
+  function allModels() { return groqModelList().concat(cloudModelList(), S.models && S.models.length ? S.models : FALLBACK_MODELS, localModelList()); }
+  function localEco() { return S.local.eco !== false; }
 
   // ---------- characters (3.3.2): พี่สาว (the original), ฮันนี่, แฮริน and up to 3 of your own ----------
   var BOT_NAME_DEFAULT = 'พี่สาว', BOT_AV_DEFAULT = '언니', BOT_AV_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
@@ -565,7 +613,7 @@
     if (usageListener) usageListener();
   }
   function searchUsable() { return S.search && (!S.searchBlockedAt || Date.now() - S.searchBlockedAt > 3 * DAY); }
-  function fileApiUsable() { return !isLocal(S.model) && (!S.fileApiFailAt || Date.now() - S.fileApiFailAt > 7 * DAY); }
+  function fileApiUsable() { return !isOpenModel(S.model) && !!S.apiKey && (!S.fileApiFailAt || Date.now() - S.fileApiFailAt > 7 * DAY); }
 
   // ---------- IndexedDB (with an in-memory fallback) ----------
   var STORES = ['sessions', 'materials', 'decks', 'cards', 'results', 'activity', 'kv'];
@@ -831,6 +879,7 @@
    */
   async function gemini(o) {
     if (isLocal(o.model || S.model)) return localGenerate(o);
+    if (isCloud(o.model || S.model) || isGroq(o.model || S.model)) return cloudGenerate(o);
     var sess = o.noChat ? null : state.session; // the chat this request belongs to, even if the user switches chats meanwhile (null = not part of any chat)
     var flags = { thinking: true, search: !!o.search && searchUsable(), code: !!o.code, altJson: false, retried: false, reupload: false, notes: [] };
     for (var attempt = 0; attempt < 6; attempt++) {
@@ -956,14 +1005,23 @@
   async function localGenerate(o) {
     var sess = o.noChat ? null : state.session, useModel = o.model || S.model, name = useModel.slice(LOCAL_PREFIX.length);
     var flags = { thinking: true, code: false, search: false, reupload: false, notes: [] };
+    var ctxWin = localEco() ? Math.min(S.local.ctx, 8192) : S.local.ctx;
+    flags.histBudget = Math.max(2000, Math.floor((ctxWin - 2500) * 2.3) - o.system.length); // keep the history inside the memory window so Ollama never cuts the instructions
     var contents = await o.buildContents(flags);
     var msgs = toOllama(o.system, contents, flags);
     var tlevel = o.thinking || S.thinking; if (tlevel !== 'low' && tlevel !== 'high') tlevel = 'medium';
-    var useThink = tlevel !== 'low' && !o.schema; // ponytail: no thinking together with a JSON schema (some Ollama builds return empty text)
-    var ctx = S.local.ctx, acc = newAcc(), sendThink = true;
+    var eco = localEco();
+    // ถนอมเครื่อง (3.3.4): the heat comes from the GPU/CPU running flat out. Thinking mode makes Qwen write thousands of hidden tokens first,
+    // so in eco mode it only thinks when you press "คิดลึกข้อนี้" (o.deep); it also uses fewer CPU threads, a smaller memory window,
+    // caps runaway answers, and lets Ollama unload the model soon after the answer so the computer can cool down.
+    var useThink = tlevel !== 'low' && !o.schema && (!eco || !!o.deep); // ponytail: no thinking together with a JSON schema (some Ollama builds return empty text)
+    var ctx = eco ? Math.min(S.local.ctx, 8192) : S.local.ctx, acc = newAcc(), sendThink = true;
+    var opts = { num_ctx: ctx };
+    if (eco) { opts.num_thread = Math.max(2, Math.floor((navigator.hardwareConcurrency || 4) / 2)); opts.num_predict = o.schema ? 6144 : 3072; }
     try {
       for (var attempt = 0; attempt < 2; attempt++) {
-        var body = { model: name, messages: msgs, stream: true, options: { num_ctx: ctx } };
+        var body = { model: name, messages: msgs, stream: true, options: opts };
+        if (eco) body.keep_alive = '2m';
         if (sendThink) body.think = useThink; // models without a thinking mode answer 400, then we retry without the field
         if (o.schema) body.format = o.schema;
         try { await streamOllama(body, o.signal, acc, o.onUpdate); break; }
@@ -975,8 +1033,230 @@
     } finally {
       if (acc.usage) { acc.bd = usageBreakdown(o.system, contents, acc.usage); recordUsage(useModel, acc.usage, sess, o.label, acc.bd, tlevel); }
     }
-    if (acc.usage && acc.usage.promptTokenCount >= ctx - 64) flags.notes.push('บทสนทนายาวเกินหน่วยความจำของโมเดลในเครื่อง (' + ctx + ' โทเค็น) ส่วนต้นอาจถูกตัดทิ้ง เปิดแชตใหม่ หรือเพิ่มค่านี้ที่ตั้งค่า > โมเดลในเครื่อง');
+    if (acc.usage && acc.usage.promptTokenCount >= ctx - 64) flags.notes.push('บทสนทนายาวเกินหน่วยความจำของโมเดลในเครื่อง (' + ctx + ' โทเค็น) ส่วนต้นอาจถูกตัดทิ้ง เปิดแชตใหม่ หรือเพิ่มค่านี้ที่ตั้งค่า > โมเดลในเครื่อง' + (eco ? ' (ต้องปิดโหมดถนอมเครื่องก่อน หรือใช้ Qwen บนคลาวด์ที่จำได้ยาวกว่ามาก)' : ''));
     acc.notes = flags.notes; acc.model = useModel; acc.level = useThink ? tlevel : null;
+    return acc;
+  }
+
+  // ---------- Cloud model through OpenRouter (3.3.4) ----------
+  // Same Qwen 3.5 9B as the Ollama option, but it runs on OpenRouter's servers: your computer only shows the text, so it stays cool.
+  function cloudHeaders(key) { return { 'Authorization': 'Bearer ' + (key || S.cloud.key), 'Content-Type': 'application/json' }; }
+  async function cloudJson(path, init, ms) {
+    var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, ms || 15000);
+    try {
+      var res = await fetch(CLOUD_API + path, Object.assign({}, init, { signal: ctl.signal }));
+      var j = null; try { j = await res.json(); } catch (e) {}
+      if (!res.ok) { var m = str(j && j.error && (j.error.message || j.error)) || ('HTTP ' + res.status); throw apiError(res.status === 401 ? 'cloud_key' : 'cloud', m, { http: res.status, apiMessage: m }); }
+      return j || {};
+    } catch (e) { if (e && e.code) throw e; throw apiError('cloud_down', String(e && e.message || e)); }
+    finally { clearTimeout(t); }
+  }
+  // checks a key and reads the credit left (both calls are free)
+  async function cloudKeyInfo(key) {
+    var j = await cloudJson('/key', { headers: cloudHeaders(key) }), d = j.data || {}, out = { label: str(d.label), free: !!d.is_free_tier, usage: +d.usage || 0, limit: d.limit, left: d.limit_remaining };
+    try { var c = (await cloudJson('/credits', { headers: cloudHeaders(key) }, 8000)).data || {}; if (c.total_credits != null) out.balance = (+c.total_credits || 0) - (+c.total_usage || 0); } catch (e) {}
+    return out;
+  }
+  async function groqKeyInfo(key) {
+    var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 15000), res;
+    try { res = await fetch(GROQ_API + '/models', { headers: cloudHeaders(key), signal: ctl.signal }); }
+    catch (e) { throw apiError('cloud_down', String(e && e.message || e), { prov: 'gq' }); }
+    finally { clearTimeout(t); }
+    if (!res.ok) throw await cloudHttpError(res, '', 'gq');
+    var j = {}; try { j = await res.json(); } catch (e) {}
+    return ((j && j.data) || []).map(function (m) { return str(m.id); });
+  }
+  // tokens and requests this browser sent to one model today (Groq's own counter can differ a little: it is per account and rolling)
+  function usedTodayOf(id) { var u = (U.days[quotaDay()] || {})[id] || { i: 0, o: 0, n: 0 }; return { tok: u.i + u.o, n: u.n }; }
+  function b64url(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  var OR_VERIFIER = 'ht2:or-verifier';
+  // one-tap sign in: OpenRouter asks you to log in, then sends you back here with a code that becomes your key (OAuth PKCE)
+  async function cloudConnect() {
+    var v = b64url(crypto.getRandomValues(new Uint8Array(32))), ch = v, method = 'plain';
+    try { if (crypto.subtle) { ch = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))); method = 'S256'; } } catch (e) {}
+    try { localStorage.setItem(OR_VERIFIER, JSON.stringify({ v: v, m: method, at: Date.now() })); } catch (e) { showToast('เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ ใช้วิธีวาง key แทน'); return; }
+    var back = location.origin + location.pathname;
+    location.href = 'https://openrouter.ai/auth?callback_url=' + encodeURIComponent(back) + '&code_challenge=' + encodeURIComponent(ch) + '&code_challenge_method=' + method;
+  }
+  async function cloudOAuthReturn() {
+    var q = new URLSearchParams(location.search), code = q.get('code'), saved = null;
+    if (!code) return false;
+    try { saved = JSON.parse(localStorage.getItem(OR_VERIFIER) || 'null'); localStorage.removeItem(OR_VERIFIER); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+    if (!saved || !saved.v) return false;
+    showToast('กำลังเชื่อมบัญชี OpenRouter…');
+    try {
+      var j = await cloudJson('/auth/keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code, code_verifier: saved.v, code_challenge_method: saved.m || 'S256' }) });
+      if (!j.key) throw apiError('cloud', 'no key');
+      S.cloud.key = j.key; S.model = CLOUD_PREFIX + CLOUD_DEFAULT_NAME; saveSettings();
+      showToast('เชื่อม OpenRouter แล้ว ใช้ Qwen 3.5 9B บนคลาวด์ได้เลย');
+      return true;
+    } catch (e) { showToast('เชื่อม OpenRouter ไม่สำเร็จ ลองใหม่ หรือวาง key เองที่หน้าตั้งค่า'); return false; }
+  }
+  // Gemini-style contents -> OpenAI-style messages (OpenRouter). Images go as image_url, PDFs as files read by OpenRouter's free PDF parser.
+  function toCloud(system, contents, flags, P) {
+    var msgs = [{ role: 'system', content: system + '\n\n[Runtime] You are an open model served through ' + ((P && P.name) || 'OpenRouter') + ': you cannot run code or search the web here. Work calculations out carefully by hand, double-check numbers, and never claim you ran code or searched. Write the final answer in the normal reply, not inside a thinking block.' }];
+    var skipped = 0;
+    contents.forEach(function (c) {
+      var parts = [], text = [], rich = false, asst = c.role === 'model';
+      (c.parts || []).forEach(function (p) {
+        if (typeof p.text === 'string') { parts.push({ type: 'text', text: p.text }); text.push(p.text); }
+        else if (!asst && p.inlineData && /^image\//.test(p.inlineData.mimeType) && flags.images !== false) { rich = true; parts.push({ type: 'image_url', image_url: { url: 'data:' + p.inlineData.mimeType + ';base64,' + p.inlineData.data } }); }
+        else if (!asst && p.inlineData && p.inlineData.mimeType === 'application/pdf' && flags.pdf !== false) { rich = true; flags.hasPdf = true; parts.push({ type: 'file', file: { filename: 'document.pdf', file_data: 'data:application/pdf;base64,' + p.inlineData.data } }); }
+        else if (p.inlineData || p.fileData) { skipped++; var t = '[ไฟล์แนบนี้ส่งให้โมเดลนี้ไม่ได้ จึงไม่มีเนื้อหาให้อ่าน ห้ามเดาเนื้อหา]'; parts.push({ type: 'text', text: t }); text.push(t); }
+      });
+      var m = { role: asst ? 'assistant' : 'user', content: rich ? parts : text.join('\n\n') };
+      if (rich || m.content) msgs.push(m);
+    });
+    if (skipped) flags.notes.push(flags.images === false ? 'รุ่นนี้ของ Groq อ่านรูปและไฟล์ PDF ไม่ได้ (ข้ามไป ' + skipped + ' ไฟล์) พิมพ์โจทย์เป็นข้อความ หรือใช้ Gemini / OpenRouter สำหรับรูป' : 'ไฟล์บางชนิดส่งให้โมเดลนี้ไม่ได้ (ข้ามไป ' + skipped + ' ไฟล์) ลองวางข้อความหรือถ่ายรูปหน้านั้นแทน');
+    return msgs;
+  }
+  // Qwen sometimes writes its thinking inside <think>…</think> in the reply itself; move it to the thinking box
+  function splitThinkTag(raw) {
+    var m = /^\s*<think>([\s\S]*?)(<\/think>\s*|$)/.exec(raw);
+    if (!m) return { think: '', text: raw };
+    return { think: m[1], text: m[2] ? raw.slice(m[0].length) : '' };
+  }
+  async function cloudHttpError(res, model, prov) {
+    var j = null; try { j = await res.json(); } catch (x) {}
+    var er = (j && j.error) || {}, msg = str(er.message || er) || ('HTTP ' + res.status);
+    var raw = er.metadata && er.metadata.raw ? ' ' + str(er.metadata.raw) : '';
+    var code = res.status === 401 ? 'cloud_key' : res.status === 402 ? 'cloud_credit' : res.status === 413 ? 'cloud_toolarge'
+      : (res.status === 404 && /model|endpoint/i.test(msg) && !/parameter/i.test(msg)) ? 'cloud_nomodel' : res.status === 429 ? 'cloud_rate' : 'cloud';
+    var ra = parseFloat(res.headers.get('retry-after') || '0') || 0;
+    if (code === 'cloud_rate' && /per day|\(tpd\)|\(rpd\)/i.test(msg)) code = 'cloud_daily';
+    return apiError(code, msg, { http: res.status, apiMessage: msg + raw, model: model, retryAfter: ra || undefined, prov: prov });
+  }
+  async function streamCloud(P, body, signal, st, acc, onUpdate) {
+    var res;
+    try { res = await fetch(P.api + '/chat/completions', { method: 'POST', headers: cloudHeaders(P.key()), body: JSON.stringify(body), signal: signal }); }
+    catch (e) { if (e && e.name === 'AbortError') throw apiError('cancelled'); throw apiError('cloud_down', String(e && e.message || e), { prov: P.id }); }
+    if (!res.ok) throw await cloudHttpError(res, body.model, P.id);
+    var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
+    function paint() { var sp = splitThinkTag(st.raw); acc.thoughts = st.reason + sp.think; acc.text = sp.text; if (onUpdate) onUpdate(acc); }
+    function useUsage(u) {
+      var th = (u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens) || 0;
+      acc.usage = { promptTokenCount: u.prompt_tokens || 0, candidatesTokenCount: Math.max(0, (u.completion_tokens || 0) - th), thoughtsTokenCount: th, cachedContentTokenCount: (u.prompt_tokens_details && u.prompt_tokens_details.cached_tokens) || 0 };
+      if (u.cost != null) acc.cost = +u.cost;
+    }
+    function line(l) {
+      l = l.replace(/\r$/, '');
+      if (l.indexOf('data:') !== 0) return; // ": OPENROUTER PROCESSING" keep-alive comments and blank lines
+      var data = l.slice(5).trim(); if (!data || data === '[DONE]') return;
+      var j; try { j = JSON.parse(data); } catch (e) { return; }
+      if (j.error) throw apiError('cloud', str(j.error.message || j.error), { http: +j.error.code || 0, apiMessage: str(j.error.message || j.error), model: body.model, partial: true, prov: P.id });
+      if (j.usage) useUsage(j.usage);
+      else if (j.x_groq && j.x_groq.usage) useUsage(j.x_groq.usage);
+      var c = j.choices && j.choices[0]; if (!c) return;
+      var d = c.delta || {};
+      if (typeof d.reasoning === 'string' && d.reasoning) st.reason += d.reasoning;
+      else if (Array.isArray(d.reasoning_details)) d.reasoning_details.forEach(function (r) { if (r && (r.text || r.summary)) st.reason += str(r.text || r.summary); });
+      if (typeof d.content === 'string') st.raw += d.content;
+      if (c.finish_reason) acc.finishReason = c.finish_reason === 'length' ? 'MAX_TOKENS' : 'STOP';
+      paint();
+    }
+    try {
+      for (;;) {
+        var r = await reader.read();
+        if (r.done) break;
+        buf += dec.decode(r.value, { stream: true });
+        var i; while ((i = buf.indexOf('\n')) >= 0) { line(buf.slice(0, i)); buf = buf.slice(i + 1); }
+      }
+      line(buf);
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw apiError('cancelled');
+      if (e && e.code) throw e;
+      throw apiError('cloud_down', String(e && e.message || e), { partial: true, prov: P.id });
+    }
+  }
+  // Groq's free plan counts prompt + the reserved answer length against 8,000 tokens per minute, so a request must stay well under that.
+  // Rough token estimate: Thai is about 2.3 characters per token, English and code about 3.8 (kept on the safe side).
+  function estTok(t) { t = str(t); var th = (t.match(/[\u0E00-\u0E7F]/g) || []).length; return Math.ceil(th / 2.3 + (t.length - th) / 3.8); }
+  function partsOf(m) { return typeof m.content === 'string' ? [m] : m.content.filter(function (p) { return typeof p.text === 'string'; }); }
+  function textOf(m, p) { return typeof m.content === 'string' ? m.content : p.text; }
+  function msgTok(msgs) { var n = 0; msgs.forEach(function (m) { n += 4; partsOf(m).forEach(function (p) { n += estTok(textOf(m, p)); }); }); return n; }
+  // cuts the longest user/assistant texts (never the instructions) until the request fits
+  function fitTok(msgs, max) {
+    var cut = false;
+    for (var guard = 0; guard < 40; guard++) {
+      var over = msgTok(msgs) - max; if (over <= 0) break;
+      var best = null, bm = null, bi = -1, bt = 0;
+      for (var i = 1; i < msgs.length; i++) partsOf(msgs[i]).forEach(function (p) { var k = estTok(textOf(msgs[i], p)); if (k > bt) { bt = k; best = p; bm = msgs[i]; bi = i; } });
+      if (!best || bt < 150) break;
+      var t0 = textOf(bm, best), keep = Math.max(200, Math.floor(t0.length * Math.max(0, bt - over - 60) / bt)), isLast = bi === msgs.length - 1;
+      // keep the end of the latest message (the question) and the start of older ones
+      var t1 = isLast ? '[…ส่วนต้นยาวเกินโควตาฟรี ถูกตัดออก…]\n' + t0.slice(t0.length - keep) : t0.slice(0, keep) + '\n[…ตัดส่วนที่เหลือ…]';
+      if (typeof bm.content === 'string') bm.content = t1; else best.text = t1;
+      cut = true;
+    }
+    return cut;
+  }
+  async function cloudGenerate(o) {
+    var sess = o.noChat ? null : state.session, useModel = o.model || S.model, P = provOf(useModel), name = useModel.slice(P.prefix.length), groq = P.id === 'gq';
+    if (!P.key()) throw apiError('cloud_nokey', '', { prov: P.id });
+    var tlevel = o.thinking || S.thinking; if (tlevel !== 'low' && tlevel !== 'high') tlevel = 'medium';
+    var think = tlevel !== 'low';
+    // Groq free plan: reserve the answer length, give the rest of the 8,000 tokens/min to the prompt
+    var maxOut = o.schema ? 4800 : 2400, shrink = 1;
+    function promptTok() { return Math.floor((GROQ_TPM - maxOut - 400) * shrink); }
+    var fixedTok = estTok(o.system) + (o.schema ? estTok(JSON.stringify(o.schema)) + 60 : 0) + 250;
+    function histChars() { return Math.max(800, Math.floor((promptTok() - fixedTok) * 2.3)); } // history is mostly Thai
+    var flags = { thinking: true, code: false, search: false, reupload: false, notes: [], reasoning: true, json: o.schema ? 'schema' : '', pdf: !groq, images: !groq, retried: false, shrunk: false };
+    if (groq) flags.histBudget = histChars();
+    var contents = await o.buildContents(flags);
+    var acc = newAcc(), cutNote = false;
+    try {
+      for (var attempt = 0; attempt < 7; attempt++) {
+        flags.hasPdf = false;
+        var msgs = toCloud(o.system, contents, flags, P);
+        if (o.schema && flags.json !== 'schema') msgs[0].content += '\n\nReply with only one JSON object (no Markdown fences) that matches this JSON Schema:\n' + JSON.stringify(o.schema);
+        if (groq && fitTok(msgs, promptTok()) && !cutNote) { cutNote = true; flags.notes.push('แชตหรือไฟล์ยาวเกินโควตาฟรีของ Groq (8,000 โทเค็นต่อนาที) จึงส่งไปแค่ส่วนท้ายของแชตและบางส่วนของไฟล์ ถ้าต้องใช้ไฟล์ยาว ใช้ Gemini หรือ OpenRouter แทน'); }
+        var body = { model: name, messages: msgs, stream: true };
+        if (groq) {
+          body.stream_options = { include_usage: true };
+          body.max_completion_tokens = maxOut;
+          if (flags.reasoning) {
+            if (/qwen/i.test(name)) { body.reasoning_format = 'parsed'; body.reasoning_effort = think ? (tlevel === 'high' ? 'medium' : 'low') : 'none'; }
+            else if (/gpt-oss/i.test(name)) body.reasoning_effort = tlevel === 'high' ? 'medium' : 'low';
+          }
+        } else {
+          body.usage = { include: true };
+          if (flags.reasoning) body.reasoning = think ? { effort: tlevel } : { enabled: false };
+          if (flags.json === 'schema') body.provider = { require_parameters: true };
+          if (flags.hasPdf) body.plugins = [{ id: 'file-parser', pdf: { engine: 'cloudflare-ai' } }]; // the free PDF reader (mistral-ocr would cost money)
+        }
+        if (flags.json === 'schema') body.response_format = { type: 'json_schema', json_schema: { name: 'result', schema: o.schema } };
+        else if (flags.json === 'object') body.response_format = { type: 'json_object' };
+        acc = newAcc();
+        try { await streamCloud(P, body, o.signal, { raw: '', reason: '' }, acc, o.onUpdate); break; }
+        catch (e) {
+          if (e.code === 'cancelled') { e.acc = acc; throw e; }
+          if (e.partial && acc.text) { e.acc = acc; throw e; }
+          var m = str(e.apiMessage).toLowerCase();
+          if (e.http === 400 || e.http === 404 || e.http === 422) {
+            if (flags.json === 'schema' && /response_format|json|schema|parameter|endpoint/.test(m)) { flags.json = 'object'; continue; }
+            if (flags.json === 'object' && /response_format|json|parameter|endpoint/.test(m)) { flags.json = ''; continue; }
+            if (flags.reasoning && /reason|think/.test(m)) { flags.reasoning = false; continue; }
+            if (flags.pdf && /pdf|file|plugin|parser/.test(m)) { flags.pdf = false; flags.notes.push('ครั้งนี้ส่งไฟล์ PDF ให้โมเดลบนคลาวด์ไม่ได้ ลองวางข้อความหรือถ่ายรูปหน้านั้นแทน'); continue; }
+          }
+          // Groq: the request was bigger than the per-minute budget -> send a shorter history once
+          if (groq && !flags.shrunk && (e.code === 'cloud_toolarge' || (e.code === 'cloud_rate' && /request too large|requested \d+/.test(m) && !/used/.test(m)))) {
+            flags.shrunk = true; shrink = 0.7; flags.histBudget = histChars(); contents = await o.buildContents(flags); continue;
+          }
+          var waitMax = groq ? 30 : 8; // Groq's per-minute budget refills within a minute
+          if (!flags.retried && (e.code === 'cloud_down' || e.http >= 500 || (e.code === 'cloud_rate' && (e.retryAfter || 0) <= waitMax))) {
+            flags.retried = true;
+            if (e.code === 'cloud_rate' && o.onUpdate) { acc.thoughts = 'ใช้ครบโควตาต่อนาทีของ ' + P.name + ' แล้ว รอ ' + Math.ceil(e.retryAfter || 3) + ' วินาทีแล้วถามให้อัตโนมัติ…'; o.onUpdate(acc); }
+            await sleep(e.retryAfter ? e.retryAfter * 1000 + 300 : 2500); continue;
+          }
+          e.acc = acc; throw e;
+        }
+      }
+    } finally {
+      if (acc.usage) { acc.bd = usageBreakdown(o.system, contents, acc.usage); recordUsage(useModel, acc.usage, sess, o.label, acc.bd, think ? tlevel : 'low'); }
+    }
+    if (groq && acc.finishReason === 'MAX_TOKENS' && o.schema) flags.notes.push('คำตอบยาวเกินที่โควตาฟรีของ Groq รับได้ต่อครั้ง ลองลดจำนวนข้อหรือจำนวนบัตรลง');
+    acc.notes = flags.notes; acc.model = useModel; acc.level = think && flags.reasoning ? tlevel : null;
     return acc;
   }
 
@@ -986,7 +1266,16 @@
     if (code === 'local_down') return 'ต่อ Ollama ที่ ' + localBase() + ' ไม่ได้ กดปุ่มด้านล่างเพื่อตรวจ แอปจะบอกวิธีแก้ทีละขั้น';
     if (code === 'local_nomodel') return 'ในเครื่องยังไม่มีโมเดล ' + str(e.model) + ' ติดตั้งโดยเปิด Command Prompt หรือ Terminal แล้วพิมพ์ ollama pull ' + str(e.model) + ' หรือเลือกโมเดลอื่นที่ติดตั้งแล้วในหน้าตั้งค่า';
     if (code === 'local') return 'Ollama แจ้งว่า: ' + clip(e.message, 200);
-    if (code === 'nokey') return 'ยังไม่ได้ใส่ API key ไปที่หน้า "ตั้งค่า" เพื่อใส่ก่อน';
+    if (code === 'cloud_nokey') return e.prov === 'gq' ? 'ยังไม่ได้ใส่ Groq key (ฟรี ไม่ผูกบัตร) ไปที่ ตั้งค่า > Groq แล้ววาง key จาก console.groq.com/keys' : 'ยังไม่ได้เชื่อมบัญชี OpenRouter สำหรับ Qwen บนคลาวด์ ไปที่ ตั้งค่า > โมเดลบนคลาวด์ แล้วกด "เชื่อมบัญชี OpenRouter" หรือวาง key';
+    if (code === 'cloud_key') return 'key ของ ' + provName(e) + ' ใช้ไม่ได้หรือถูกลบไปแล้ว ไปที่หน้าตั้งค่าเพื่อใส่ key ใหม่';
+    if (code === 'cloud_credit') return 'เครดิต OpenRouter หมด (หรือติดลบ) รุ่นที่เสียเงินจะใช้ไม่ได้จนกว่าจะเติมที่ openrouter.ai/settings/credits ถ้าไม่อยากเสียเงิน ใช้ Groq ฟรี หรือ Gemini แทน';
+    if (code === 'cloud_nomodel') return provName(e) + ' ไม่พบรุ่น ' + str(e.model) + ' (อาจถูกถอดออกแล้ว) เลือกรุ่นอื่นที่หน้าตั้งค่า';
+    if (code === 'cloud_daily') return 'ใช้ครบโควตาฟรีต่อวันของ ' + provName(e) + ' แล้ว (Groq: 1,000 ครั้ง หรือ 200,000 โทเค็นต่อวัน ต่อรุ่น) ' + (e.retryAfter ? 'ใช้ได้อีกครั้งในราว ' + Math.ceil(e.retryAfter / 60) + ' นาที ' : '') + 'ระหว่างนี้เปลี่ยนไปรุ่นอื่นของ Groq หรือใช้ Gemini ได้';
+    if (code === 'cloud_rate') return provName(e) + ' แจ้งว่าใช้ถี่เกินโควตา' + (e.prov === 'gq' ? ' (ฟรี: 8,000 โทเค็นและ 30 ครั้งต่อนาที)' : '') + (e.retryAfter ? ' รอประมาณ ' + Math.ceil(e.retryAfter) + ' วินาที' : ' รอสักครู่') + ' แล้วกด "ลองอีกครั้ง"';
+    if (code === 'cloud_toolarge') return 'ข้อความ ประวัติแชต หรือไฟล์ยาวเกินโควตาฟรีของ Groq ต่อครั้ง เปิดแชตใหม่ หรือถอดไฟล์ยาวออก หรือใช้ Gemini / OpenRouter สำหรับงานที่ใช้ไฟล์ยาว';
+    if (code === 'cloud_down') return 'ต่อ ' + provName(e) + ' ไม่ได้ ตรวจอินเทอร์เน็ตแล้วกด "ลองอีกครั้ง"' + (e.prov === 'gq' ? ' (ถ้าเป็นทุกครั้ง เบราว์เซอร์อาจถูกบล็อกไม่ให้เรียก Groq ตรงๆ ใช้ OpenRouter หรือ Gemini แทน)' : '');
+    if (code === 'cloud') return provName(e) + ' แจ้งว่า: ' + clip(e.message, 200);
+    if (code === 'nokey') return 'ยังไม่ได้ตั้งโมเดล ไปที่หน้า "ตั้งค่า" แล้ววาง Groq key (Qwen ฟรี) หรือ Gemini API key (ฟรี) หรือเชื่อม OpenRouter';
     if (code === 'network') return 'เชื่อมต่ออินเทอร์เน็ตไม่ได้ ตรวจการเชื่อมต่อแล้วกด "ลองอีกครั้ง"';
     if (code === 'invalid_json') return 'พี่สาวส่งผลลัพธ์มาในรูปแบบที่แอปอ่านไม่ได้ กด "ลองอีกครั้ง"';
     if (code === 'blocked') return 'Gemini ไม่ตอบข้อนี้เพราะติดตัวกรองความปลอดภัย ลองถามด้วยคำอื่น';
@@ -1201,6 +1490,7 @@
     for (var i = 0; i < mats.length; i++) {
       var m = mats[i];
       if (m.kind === 'image') continue;
+      if (m.kind === 'pdf' && (isLocal(S.model) || isGroq(S.model))) continue; // the local model cannot read PDFs, so indexing it would only make the computer work for nothing
       var total = m.kind === 'pdf' ? await pdfPages(m) : unitCount(m);
       if (total < autoMin(m)) continue;
       var sc = (state.session.matScope && state.session.matScope[m.id]) || { mode: 'auto' };
@@ -1447,7 +1737,7 @@
       if (opts.upToUser) while (msgs.length && msgs[msgs.length - 1].role !== 'user') msgs.pop();
       var lastIdx = msgs.length - 1, lastU = lastIdx;
       if (opts.second) while (lastU >= 0 && msgs[lastU].role !== 'user') lastU--;
-      var budget = HISTORY_CHAR_BUDGET;
+      var budget = (flags && flags.histBudget) || HISTORY_CHAR_BUDGET; // Groq's free plan and small local memory windows need a much smaller history
       var picked = [];
       for (var i = lastIdx; i >= 0; i--) {
         var t = turnText(msgs[i], i === lastU && msgs[i].role === 'user');
@@ -1714,7 +2004,7 @@
       node.querySelector(':scope > .md').innerHTML = renderMarkdown(m.content);
       renderThoughts(node, m, !m.content);
       stick();
-    }, 90));
+    }, str(m.content).length > 3000 ? 300 : 110)); // long answers re-render less often while streaming (less CPU work, cooler laptop)
   }
   function finalizeRender(node, m) {
     var t = renderTimers.get(node); if (t) { clearTimeout(t); renderTimers.delete(node); }
@@ -1762,7 +2052,9 @@
       ex.appendChild(h('div', { class: 'note bad', text: m.error }));
       var acts = [];
       if (m.retryable && m === lastMessage()) acts.push(h('button', { class: 'textbtn', type: 'button', text: 'ลองอีกครั้ง', onclick: retryLast }));
-      else if (m.needsKey) acts.push(h('button', { class: 'textbtn strong', type: 'button', text: 'ไปใส่ API key หรือเลือกโมเดลในเครื่อง', onclick: function () { showView('settings'); } }));
+      else if (m.needsKey) acts.push(h('button', { class: 'textbtn strong', type: 'button', text: 'ไปตั้งค่าโมเดล', onclick: function () { showView('settings'); } }));
+      if (m.cloudFix) acts.push(h('button', { class: 'textbtn strong', type: 'button', text: 'ไปหน้าตั้งค่าโมเดล', onclick: function () { showView('settings'); } }));
+      if (m.localFix) acts.push(h('button', { class: 'textbtn', type: 'button', text: 'ใช้ Qwen ฟรีผ่าน Groq แทน (เครื่องไม่ร้อน)', onclick: function () { S.model = GROQ_PREFIX + GROQ_DEFAULT_NAME; saveSettings(); showView('settings'); showToast(S.groq.key ? 'เปลี่ยนเป็น Qwen ผ่าน Groq แล้ว กด "ลองอีกครั้ง" ได้เลย' : 'เลือก Qwen ผ่าน Groq แล้ว วาง Groq key (ฟรี) ก่อนนะ'); } }));
       if (m.localFix) acts.push(h('button', { class: 'textbtn strong', type: 'button', text: 'ตรวจการเชื่อมต่อ Ollama', onclick: function () { showView('settings'); } }));
       if (acts.length) ex.appendChild(h('div', { class: 'msg-actions' }, acts));
       return;
@@ -2108,7 +2400,7 @@
   }
   function needKey(am) {
     if (canAsk()) return false;
-    am.local = true; am.needsKey = true; am.error = errorCopy({ code: 'nokey' });
+    am.local = true; am.needsKey = true; am.error = errorCopy({ code: isOpenModel(S.model) && !isLocal(S.model) ? 'cloud_nokey' : 'nokey', prov: isGroq(S.model) ? 'gq' : 'or' });
     return true;
   }
   function fail(am, e) {
@@ -2116,6 +2408,7 @@
     if (e.acc && e.acc.text && !am.kind) { am.content = e.acc.text; }
     am.error = errorCopy(e);
     am.localFix = str(e.code).indexOf('local') === 0;
+    am.cloudFix = /^cloud_(nokey|key|credit|nomodel|daily)$/.test(str(e.code));
     am.retryable = !(e.code === 'too_large' || e.code === 'blocked' || e.code === 'nokey');
   }
 
@@ -2142,7 +2435,7 @@
 
   async function generate(gen) {
     setBusy(true);
-    var plan = gen.ch && CHS.list[gen.ch] ? [gen.ch] : chPlanFor(state.subject()), chId = plan[0], rest = gen.ch ? (gen.rest || []) : plan.slice(1), chOk = false, sess0 = state.session;
+    var plan = gen.ch && CHS.list[gen.ch] ? [gen.ch] : chPlanFor(state.subject()), chId = plan[0], rest = gen.ch ? (gen.rest || []) : ((isLocal(S.model) && localEco()) || isGroq(S.model) ? [] : plan.slice(1)), chOk = false, sess0 = state.session;
     var am = { role: 'assistant', content: '', ts: Date.now(), gen: { only: gen.only || null, deep: !!gen.deep, ch: chId, second: !!gen.second }, ch: chId, chName: chName(chId), chColor: chGet(chId).color };
     chCur = chId;
     state.session.messages.push(am);
@@ -2167,11 +2460,12 @@
       if (gen.full) am.gen.full = true;
       if (Object.keys(scope).length) { am.gen.scope = scope; am.scope = Object.keys(scope).map(function (k) { return scope[k]; }); }
       setStatus(node, '');
-      var tools = { code: codeAllowed(subj, level) || (!!gen.deep && S.codeExec && subj !== 'english' && subj !== 'other'), search: searchUsable(), deep: !!gen.deep, ch: chId };
+      var openM = isOpenModel((gen.deep && S.deepModel) ? S.deepModel : S.model); // Qwen (cloud or local) has no code execution or Google Search
+      var tools = { code: !openM && (codeAllowed(subj, level) || (!!gen.deep && S.codeExec && subj !== 'english' && subj !== 'other')), search: !openM && searchUsable(), deep: !!gen.deep, ch: chId };
       var useModel = (gen.deep && S.deepModel) ? S.deepModel : S.model;
       var callModel = function (mdl) {
         return gemini({
-          model: mdl, thinking: level, system: buildSystem(tools), code: tools.code, search: tools.search, signal: ctl.signal,
+          model: mdl, thinking: level, deep: !!gen.deep, system: buildSystem(tools), code: tools.code, search: tools.search, signal: ctl.signal,
           buildContents: makeContentsBuilder({ withMaterials: true, signal: ctl.signal, scope: scope, second: !!gen.second, extraUserText: gen.second ? CH_SECOND_TEXT : undefined }, node),
           onUpdate: function (a) {
             am.thoughts = a.thoughts;
@@ -3420,7 +3714,7 @@
   async function sendPlan(text) {
     text = str(text).trim();
     if (!text || planBusy) return;
-    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     var P = state.planner;
     P.chat.push({ role: 'user', content: text, ts: Date.now() });
     var am = { role: 'assistant', content: '', ts: Date.now() };
@@ -3879,7 +4173,7 @@
     }
     askBtn.addEventListener('click', async function () {
       if (moodBusy) return;
-      if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+      if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
       var n = 0, k0 = dayKey(); for (var i = 0; i < 7; i++) if (state.mood[addDays(k0, -i)]) n++;
       if (!n) { showToast('เช็กอินอย่างน้อย 1 วันก่อน พี่สาวจะได้มีข้อมูลให้ดู'); return; }
       moodBusy = true; askBtn.disabled = true; askBtn.textContent = 'พี่สาวกำลังอ่านข้อมูล…'; sumErr.textContent = '';
@@ -3949,7 +4243,7 @@
   function simTopic(it, hard) { return (hard ? 'ข้อที่ยากขึ้นจากเรื่อง ' : 'ข้อคล้ายกับโจทย์นี้ เรื่อง ') + (it.topic || '') + (it.sub ? ' › ' + it.sub : '') + ': ' + clip(it.q, 160); }
   async function analyzeEntry(it, btn) {
     if (nbBusy) return;
-    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     nbBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังวิเคราะห์…';
     try {
       var schema = { type: 'object', properties: { why: { type: 'string' }, error_type: { type: 'string', enum: ['concept', 'recall', 'calc', 'read', 'careless'] }, principle: { type: 'string' }, technique: { type: 'string' } }, required: ['why', 'error_type', 'principle'] };
@@ -4141,7 +4435,7 @@
   function pEmoji(p) { return p === null ? '⚪' : p >= 80 ? '🟢' : p >= 60 ? '🟡' : '🔴'; }
   async function genSkeleton(s, btn) {
     if (msBusy) return;
-    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     msBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังร่างหัวข้อ…';
     try {
       var en = (SUBJECTS.filter(function (x) { return x.id === s; })[0] || {}).en || s;
@@ -4325,7 +4619,7 @@
   }
   async function flashFromErrors() {
     if (fl.aiBusy) return;
-    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     var picks = state.errbook.filter(function (x) { return x.status === 'open' && fl.aiSel[x.id]; }).slice(0, 20);
     if (!picks.length) { showToast('เลือกข้อที่ผิดอย่างน้อย 1 ข้อ'); return; }
     fl.aiBusy = true; renderFlash();
@@ -4642,7 +4936,7 @@
   var kmKeep = { id: '', l: 0, t: 0 };
   async function genLinks(all, btn) {
     if (kmBusy) return;
-    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     var names = all.filter(function (n) { return n.kind !== 'root'; }).map(function (n) { return n.n; });
     if (names.length < 3) { showToast('ยังมีหัวข้อน้อยเกินไป'); return; }
     kmBusy = true; btn.disabled = true; btn.textContent = 'พี่สาวกำลังร่างเส้นเชื่อม…';
@@ -4821,7 +5115,7 @@
       try {
         var model = S.model, subj = state.subject();
         var cls = S.thinking === 'auto' ? classifyThinking(text, { subject: subj }) : { level: S.thinking === 'low' || S.thinking === 'high' ? S.thinking : 'medium', why: 'ตั้งไว้เอง' };
-        var tools = { code: codeAllowed(subj, cls.level), search: false };
+        var tools = { code: !isOpenModel(S.model) && codeAllowed(subj, cls.level), search: false };
         var userTurn = function (parts) { return [{ role: 'user', parts: parts }]; };
         var base = await countTok(model, { contents: userTurn([{ text: '.' }]) });
         var sysTok = Math.max(0, (await countTok(model, { contents: userTurn([{ text: '.' }]), systemInstruction: { parts: [{ text: buildSystem(tools) }] }, tools: tools.code ? [{ codeExecution: {} }] : undefined })) - base);
@@ -4870,6 +5164,130 @@
     ]));
   }
 
+  // Groq panel (settings + first start): paste a free key, pick Qwen 3.8 27B
+  function buildGroqPanel(box, onChange) {
+    box.innerHTML = '';
+    box.appendChild(h('p', { class: 'muted', html: '<b>ฟรีจริง ไม่ต้องผูกบัตร</b> รันบนเซิร์ฟเวอร์ของ <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> เครื่องไม่ร้อน ตอบเร็วมาก รุ่นหลักคือ <b>Qwen 3.8 27B</b> (ใหญ่และเก่งกว่า 9B) ข้อจำกัดของแพ็กเกจฟรี ต่อรุ่น: <b>30 ครั้งต่อนาที · 1,000 ครั้งต่อวัน · 8,000 โทเค็นต่อนาที · 200,000 โทเค็นต่อวัน</b> เพราะเพดานต่อนาทีต่ำ แอปจะส่งประวัติแชตแค่ช่วงท้ายและตัดไฟล์ยาวให้ อ่านรูปและ PDF ไม่ได้ ค้นเว็บและรันโค้ดไม่ได้ ข้อความที่ถามจะส่งไปที่ Groq' }));
+    box.appendChild(h('ol', { class: 'muted', style: 'margin:6px 0 10px;padding-left:20px' }, [
+      h('li', { html: 'เปิด <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> แล้วล็อกอิน (ใช้ Google ได้)' }),
+      h('li', { text: 'กด Create API Key ตั้งชื่ออะไรก็ได้ แล้วคัดลอก key (ขึ้นต้นด้วย gsk_)' }),
+      h('li', { text: 'วางในช่องด้านล่าง แล้วกดบันทึก ใช้ได้ทันที' })
+    ]));
+    var keyIn = h('input', { class: 'text', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'วาง Groq key (gsk_...) ที่นี่', value: S.groq.key });
+    var show = h('button', { class: 'textbtn', type: 'button', text: 'แสดง', onclick: function () { keyIn.type = keyIn.type === 'password' ? 'text' : 'password'; show.textContent = keyIn.type === 'password' ? 'แสดง' : 'ซ่อน'; } });
+    var save = h('button', { class: 'primary', type: 'button', text: 'บันทึกและตรวจ key' });
+    var status = h('div', { class: 'muted' });
+    var today = h('div', { class: 'muted', style: 'margin-top:6px' });
+    box.appendChild(h('div', { class: 'keyrow' }, [keyIn, show]));
+    box.appendChild(h('div', { class: 'row' }, [save, status]));
+    var list = h('div', { class: 'lm-list' });
+    box.appendChild(list);
+    box.appendChild(today);
+    var custom = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', placeholder: 'เช่น openai/gpt-oss-20b', 'aria-label': 'ชื่อรุ่นอื่นจาก Groq' });
+    var addBtn = h('button', { class: 'textbtn', type: 'button', text: 'เพิ่มและใช้รุ่นนี้' });
+    box.appendChild(h('details', { class: 'bd-recent' }, [h('summary', { text: 'ใช้รุ่นอื่นจาก Groq' }),
+      h('p', { class: 'muted', html: 'ดูรุ่นที่ใช้ได้และโควตาของบัญชีคุณที่ <a href="https://console.groq.com/settings/limits" target="_blank" rel="noopener">console.groq.com/settings/limits</a> แต่ละรุ่นมีโควตาแยกกัน ถ้ารุ่นหนึ่งใช้ครบวันแล้ว สลับไปอีกรุ่นได้' }),
+      h('div', { class: 'keyrow' }, [custom, addBtn])]));
+    var avail = null;
+    function pick(n) { S.model = GROQ_PREFIX + n; saveSettings(); paint(); if (onChange) onChange(); showToast(S.groq.key ? 'ใช้ ' + n + ' (Groq ฟรี) แล้ว พิมพ์ถามพี่สาวได้เลย' : 'เลือก ' + n + ' แล้ว วาง Groq key ก่อนนะ'); }
+    function paint() {
+      list.innerHTML = '';
+      groqModelList().forEach(function (m) {
+        var n = m.id.slice(GROQ_PREFIX.length), on = S.model === m.id, p = GROQ_PRESETS.filter(function (x) { return x.id === n; })[0];
+        var gone = avail && avail.indexOf(n) < 0;
+        list.appendChild(h('div', { class: 'lm-item' + (on ? ' on' : '') }, [
+          h('span', null, [h('b', { text: p ? p.name : n }), h('div', { class: gone ? 'badline' : 'muted', style: 'font-size:.82rem', text: gone ? 'ตอนนี้ Groq ไม่มีรุ่นนี้ให้บัญชีของคุณแล้ว เลือกรุ่นอื่น' : (p ? p.note : 'รุ่นที่คุณเพิ่มเอง') })]),
+          h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () { pick(n); } })]));
+      });
+      var fmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
+      if (isGroq(S.model)) { var u = usedTodayOf(S.model); today.textContent = 'วันนี้ใช้รุ่นนี้ไป ' + fmt(u.tok) + ' / ' + fmt(GROQ_TPD) + ' โทเค็น · ' + u.n + ' / ' + fmt(GROQ_RPD) + ' ครั้ง (นับจากเครื่องนี้ ตัวเลขจริงดูที่ console.groq.com)'; }
+      else today.textContent = '';
+    }
+    async function check(k, pickIt) {
+      save.disabled = true; status.className = 'muted'; status.textContent = 'กำลังตรวจ…';
+      try {
+        avail = await groqKeyInfo(k);
+        S.groq.key = k; if (pickIt && !isGroq(S.model)) S.model = GROQ_PREFIX + GROQ_DEFAULT_NAME; saveSettings();
+        status.className = 'okline'; status.textContent = 'ใช้ได้แล้ว (ฟรี) พบ ' + avail.length + ' รุ่น';
+        paint(); if (onChange) onChange();
+      } catch (e) { status.className = 'badline'; status.textContent = e.code === 'cloud_key' ? 'key นี้ใช้ไม่ได้ ตรวจว่าคัดลอกครบ (ขึ้นต้นด้วย gsk_)' : errorCopy(e); }
+      save.disabled = false;
+    }
+    save.addEventListener('click', function () {
+      var k = keyIn.value.trim();
+      if (!k) { S.groq.key = ''; saveSettings(); status.className = 'badline'; status.textContent = 'ลบ key แล้ว'; if (onChange) onChange(); return; }
+      check(k, true);
+    });
+    addBtn.addEventListener('click', function () {
+      var n = custom.value.trim().replace(/^gq:/, '');
+      if (!/^[\w.\/:-]+$/.test(n)) { showToast('ใส่ชื่อรุ่นตามที่ Groq เขียน เช่น openai/gpt-oss-20b'); return; }
+      if (S.groq.models.indexOf(n) < 0 && !GROQ_PRESETS.some(function (p) { return p.id === n; })) S.groq.models.push(n);
+      custom.value = ''; pick(n);
+    });
+    paint();
+    if (S.groq.key) check(S.groq.key);
+  }
+
+  // Cloud model panel (settings + first start): connect OpenRouter with one tap (or paste a key), then pick Qwen 3.5 9B
+  function buildCloudPanel(box, onChange) {
+    box.innerHTML = '';
+    box.appendChild(h('p', { class: 'muted', html: 'ใช้ <b>Qwen 3.5 9B ตัวเดียวกับใน Ollama</b> แต่รันบนเซิร์ฟเวอร์ของ <a href="https://openrouter.ai/qwen/qwen3.5-9b" target="_blank" rel="noopener">OpenRouter</a> เครื่องของคุณแค่แสดงข้อความ จึง<b>ไม่ร้อน ไม่ต้องโหลดโมเดล 6.6 GB</b> และใช้ได้ทั้งคอมและมือถือ <b>รุ่นนี้เสียเงิน</b> ตัดจากเครดิตที่เติมไว้ ราว 3–5 บาทต่อล้านโทเค็น (ข้อความหนึ่งส่งคำสั่งระบบและประวัติแชตไปด้วย จึงตกราว 1–5 สตางค์ต่อข้อความ) ถ้าไม่เติมเครดิตจะใช้ไม่ได้และไม่โดนเก็บเงิน รุ่นที่ลงท้าย <code>:free</code> ไม่เสียเงิน แต่ได้แค่ 50 ครั้งต่อวัน (1,000 ครั้งถ้าเคยเติมรวม 10 ดอลลาร์ขึ้นไป) อย่าเปิดเติมเงินอัตโนมัติ (Auto top-up) อ่านเพิ่มใน README.txt ข้อจำกัดเหมือนโมเดลในเครื่อง: ค้นเว็บและรันโค้ดตรวจคำตอบไม่ได้ ตัวเลขสำคัญควรตรวจซ้ำ ข้อความที่ถามจะส่งไปที่ OpenRouter' }));
+    var status = h('div', { class: 'muted' });
+    var connect = h('button', { class: 'primary', type: 'button', text: S.cloud.key ? 'เชื่อมบัญชี OpenRouter ใหม่' : 'เชื่อมบัญชี OpenRouter (กดครั้งเดียว)', onclick: function () { cloudConnect(); } });
+    box.appendChild(h('div', { class: 'row' }, [connect]));
+    box.appendChild(h('p', { class: 'muted', style: 'margin-top:4px', text: 'ระบบจะพาไปล็อกอินที่ OpenRouter (สมัครด้วย Google ได้) กดอนุญาต แล้วจะเด้งกลับมาที่แอปพร้อมใช้งานทันที' }));
+    var keyIn = h('input', { class: 'text', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'หรือวาง OpenRouter key (sk-or-...) ที่นี่', value: S.cloud.key });
+    var show = h('button', { class: 'textbtn', type: 'button', text: 'แสดง', onclick: function () { keyIn.type = keyIn.type === 'password' ? 'text' : 'password'; show.textContent = keyIn.type === 'password' ? 'แสดง' : 'ซ่อน'; } });
+    var save = h('button', { class: 'textbtn strong', type: 'button', text: 'บันทึกและตรวจ key' });
+    box.appendChild(h('div', { class: 'keyrow', style: 'margin-top:10px' }, [keyIn, show]));
+    box.appendChild(h('div', { class: 'row' }, [save, status]));
+    var list = h('div', { class: 'lm-list' });
+    box.appendChild(list);
+    var custom = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', placeholder: 'เช่น qwen/qwen3.5-27b หรือรุ่นที่ลงท้าย :free', 'aria-label': 'ชื่อรุ่นอื่นจาก OpenRouter' });
+    var addBtn = h('button', { class: 'textbtn', type: 'button', text: 'เพิ่มและใช้รุ่นนี้' });
+    box.appendChild(h('details', { class: 'bd-recent' }, [h('summary', { text: 'ใช้รุ่นอื่นจาก OpenRouter' }),
+      h('p', { class: 'muted', html: 'ดูชื่อรุ่นได้ที่ <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">openrouter.ai/models</a> (กดคัดลอกชื่อรุ่น) <b>เฉพาะรุ่นที่ลงท้ายด้วย <code>:free</code> เท่านั้นที่ไม่เสียเงิน</b> ได้ 20 ครั้งต่อนาที และ 50 ครั้งต่อวัน (1,000 ครั้งต่อวันถ้าเคยเติมเครดิตรวม 10 ดอลลาร์ขึ้นไป) ถ้าเครดิตติดลบ รุ่นฟรีก็ใช้ไม่ได้' }),
+      h('div', { class: 'keyrow' }, [custom, addBtn])]));
+
+    function pick(n) { S.model = CLOUD_PREFIX + n; saveSettings(); paint(); if (onChange) onChange(); showToast(S.cloud.key ? 'ใช้ ' + n + ' บนคลาวด์แล้ว พิมพ์ถามพี่สาวได้เลย' : 'เลือก ' + n + ' แล้ว เชื่อมบัญชี OpenRouter ก่อนนะ'); }
+    function paint() {
+      list.innerHTML = '';
+      cloudModelList().forEach(function (m) {
+        var n = m.id.slice(CLOUD_PREFIX.length), on = S.model === m.id, p = CLOUD_PRESETS.filter(function (x) { return x.id === n; })[0];
+        list.appendChild(h('div', { class: 'lm-item' + (on ? ' on' : '') }, [
+          h('span', null, [h('b', { text: p ? p.name : n }), h('div', { class: 'muted', style: 'font-size:.82rem', text: p ? p.note : 'รุ่นที่คุณเพิ่มเอง' })]),
+          h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () { pick(n); } })]));
+      });
+    }
+    function money(n) { return '$' + (Math.round(n * 100) / 100).toFixed(2); }
+    async function check(k, pickIt) {
+      save.disabled = true; status.className = 'muted'; status.textContent = 'กำลังตรวจ…';
+      try {
+        var info = await cloudKeyInfo(k);
+        S.cloud.key = k; if (pickIt && !isCloud(S.model)) S.model = CLOUD_PREFIX + CLOUD_DEFAULT_NAME; saveSettings();
+        status.className = 'okline';
+        status.textContent = 'ใช้ได้แล้ว' + (info.balance != null ? ' · เครดิตคงเหลือ ' + money(info.balance) : info.left != null ? ' · วงเงิน key เหลือ ' + money(info.left) : '') + (info.balance != null && info.balance <= 0 ? ' (ยังไม่มีเครดิต เติมที่ openrouter.ai/settings/credits หรือใช้รุ่น :free)' : '');
+        connect.textContent = 'เชื่อมบัญชี OpenRouter ใหม่';
+        paint(); if (onChange) onChange();
+      } catch (e) { status.className = 'badline'; status.textContent = e.code === 'cloud_key' ? 'key นี้ใช้ไม่ได้ ตรวจว่าคัดลอกครบ หรือกดเชื่อมบัญชีแทน' : errorCopy(e); }
+      save.disabled = false;
+    }
+    save.addEventListener('click', function () {
+      var k = keyIn.value.trim();
+      if (!k) { S.cloud.key = ''; saveSettings(); status.className = 'badline'; status.textContent = 'ลบ key แล้ว'; if (onChange) onChange(); return; }
+      check(k, true);
+    });
+    addBtn.addEventListener('click', function () {
+      var n = custom.value.trim().replace(/^or:/, '').replace(/^https?:\/\/openrouter\.ai\//, '');
+      if (!/^[\w.-]+\/[\w.:-]+$/.test(n)) { showToast('ชื่อรุ่นต้องเป็นแบบ ผู้ผลิต/ชื่อรุ่น เช่น qwen/qwen3.5-27b'); return; }
+      if (!/:free$/.test(n)) showToast('รุ่นนี้ไม่ได้ลงท้ายด้วย :free จะตัดเงินจากเครดิต OpenRouter');
+      if (S.cloud.models.indexOf(n) < 0 && !CLOUD_PRESETS.some(function (p) { return p.id === n; })) S.cloud.models.push(n);
+      custom.value = ''; pick(n);
+    });
+    paint();
+    if (S.cloud.key) check(S.cloud.key);
+  }
+
   // Local model panel (settings + first start): check Ollama, list installed models, pick one with a tap
   function buildLocalPanel(box, onChange, auto) {
     box.innerHTML = '';
@@ -4886,7 +5304,9 @@
     box.appendChild(h('div', { class: 'row' }, [go]));
     box.appendChild(status);
     box.appendChild(out);
-    box.appendChild(h('div', { class: 'field', style: 'margin-top:12px' }, [h('label', { text: 'หน่วยความจำต่อคำขอ (ถ้าแชตยาวแล้วโมเดลลืมต้นเรื่อง ให้เพิ่ม)' }), ctxSel]));
+    box.appendChild(h('div', { class: 'field', style: 'margin-top:12px' }, [h('label', { text: 'หน่วยความจำต่อคำขอ (ถ้าแชตยาวแล้วโมเดลลืมต้นเรื่อง ให้เพิ่ม · โหมดถนอมเครื่องใช้ไม่เกิน 8K)' }), ctxSel]));
+    box.appendChild(switchRow('ถนอมเครื่อง (ลดความร้อน)', 'แนะนำให้เปิด: ไม่ให้โมเดลคิดยาวก่อนตอบ (ยกเว้นกด "คิดลึกข้อนี้") ใช้ CPU ครึ่งเดียว จำกัดความยาวคำตอบ ให้ตัวละครตอบทีละคน และปล่อยโมเดลออกจากหน่วยความจำหลังตอบ 2 นาที ตอบช้าลงเล็กน้อยแต่เครื่องเย็นกว่ามาก', localEco(), function (v) { S.local.eco = v; saveSettings(); }));
+    box.appendChild(h('p', { class: 'muted', html: 'ยังร้อนอยู่? เครื่องโน้ตบุ๊กที่ไม่มีการ์ดจอแยกจะร้อนเสมอเมื่อรันรุ่น 9B ลองรุ่นเล็ก <code>ollama pull qwen3.5:4b</code> หรือใช้ <b>Qwen 3.5 9B บนคลาวด์</b> ด้านบนแทน ซึ่งเครื่องไม่ต้องทำงานเลย' }));
 
     function paintModels(r) {
       out.innerHTML = '';
@@ -4943,7 +5363,7 @@
     var root = $('settings-root'); root.innerHTML = '';
     root.appendChild(h('h1', { class: 'page-title', text: 'ตั้งค่า' }));
 
-    root.appendChild(h('h2', { class: 'section-title', text: 'Gemini API key (ไม่ต้องใส่ถ้าใช้โมเดลในเครื่อง)' }));
+    root.appendChild(h('h2', { class: 'section-title', text: 'Gemini API key (ฟรี · ไม่ต้องใส่ถ้าใช้ Groq, OpenRouter หรือโมเดลในเครื่อง)' }));
     root.appendChild(h('p', { class: 'muted', html: 'สร้าง key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> key จะเก็บไว้ในเครื่องนี้เท่านั้น และส่งไปที่ Google ตอนถามพี่สาวเท่านั้น' }));
     var keyInput = h('input', { class: 'text', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'วาง API key ที่นี่', value: S.apiKey });
     var show = h('button', { class: 'textbtn', type: 'button', text: 'แสดง', onclick: function () { keyInput.type = keyInput.type === 'password' ? 'text' : 'password'; show.textContent = keyInput.type === 'password' ? 'แสดง' : 'ซ่อน'; } });
@@ -4963,6 +5383,12 @@
     root.appendChild(h('div', { class: 'keyrow' }, [keyInput, show]));
     root.appendChild(h('div', { class: 'row' }, [saveKey, keyStatus]));
 
+    root.appendChild(h('h2', { class: 'section-title', text: 'Groq · Qwen ฟรี ไม่ผูกบัตร (เครื่องไม่ร้อน)' }));
+    var groqBox = h('div');
+    root.appendChild(groqBox);
+    root.appendChild(h('h2', { class: 'section-title', text: 'โมเดลบนคลาวด์ (Qwen 3.5 9B ผ่าน OpenRouter) · เสียเงินตามที่ใช้' }));
+    var cloudBox = h('div');
+    root.appendChild(cloudBox);
     root.appendChild(h('h2', { class: 'section-title', text: 'โมเดลในเครื่อง (Ollama)' }));
     var localBox = h('div');
     root.appendChild(localBox);
@@ -5055,6 +5481,8 @@
       modelBox.appendChild(h('p', { class: 'muted', text: 'รุ่น Flash ใช้ฟรีได้ภายในโควตาต่อนาทีและต่อวัน รุ่น Pro ต้องเปิดใช้แบบเสียเงินใน Google AI Studio' }));
     }
     renderModelSelect();
+    buildGroqPanel(groqBox, function () { if (modelBox.isConnected) renderModelSelect(); });
+    buildCloudPanel(cloudBox, function () { if (modelBox.isConnected) renderModelSelect(); });
     buildLocalPanel(localBox, function () { if (modelBox.isConnected) renderModelSelect(); }, isLocal(S.model));
     // รายการโมเดลที่เก็บไว้จากเวอร์ชันเก่าไม่มีข้อมูลโทเค็น โหลดใหม่ให้เงียบๆ
     if (S.apiKey && S.models && S.models.length && !S.models.some(function (m) { return m.inTok; })) {
@@ -5231,7 +5659,7 @@
   async function pzLearn() {
     var P = PZ();
     if (pzBusy) return;
-    if (!canAsk()) { showToast('ยังไม่ได้ใส่ API key หรือเลือกโมเดลในเครื่อง ไปที่หน้าตั้งค่าก่อน'); return; }
+    if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     var msgs = state.session.messages.filter(function (m) { return !m.local && m.kind !== 'summary' && str(m.content).trim(); });
     if (msgs.length < 2) { showToast('เรียนกับพี่สาวสักพักก่อน แล้วค่อยให้จดนะ'); return; }
     var convo = msgs.slice(-16).map(function (m) { return (m.role === 'user' ? 'Student: ' : 'Tutor: ') + clip(str(m.content).replace(/\s+/g, ' '), 500); }).join('\n');
@@ -6375,7 +6803,7 @@
     var ob = $('onboard'); ob.innerHTML = ''; ob.hidden = false;
     var inner = h('div', { class: 'ob-inner' });
     inner.appendChild(h('h1', { class: 'ob-title', html: 'Unnie Study<br><mark>พี่สาวคนโต</mark> ที่อยู่ในมือถือ' }));
-    inner.appendChild(h('p', { class: 'page-lead', text: 'สอนคณิต ฟิสิกส์ เคมี ชีวะ อังกฤษ และ Python อ่านชีทให้ ออกข้อสอบ ทำบัตรคำ และจำจุดอ่อนของคุณ ใช้สมองของ Gemini ผ่าน API key ของคุณเอง หรือรันโมเดลในเครื่องผ่าน Ollama' }));
+    inner.appendChild(h('p', { class: 'page-lead', text: 'สอนคณิต ฟิสิกส์ เคมี ชีวะ อังกฤษ และ Python อ่านชีทให้ ออกข้อสอบ ทำบัตรคำ และจำจุดอ่อนของคุณ ใช้สมองของ Gemini ผ่าน API key ของคุณเอง หรือ Qwen ฟรีผ่าน Groq หรือ Qwen 3.5 9B ผ่าน OpenRouter หรือรันในเครื่องผ่าน Ollama' }));
     var s1 = h('div', { class: 'ob-step' }, [h('h2', { text: 'ขั้นที่ 1 รับ API key ฟรี' }), h('ol', null, [
       h('li', { html: 'เปิด <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> แล้วล็อกอินด้วยบัญชี Google' }),
       h('li', { text: 'กด Create API key แล้วคัดลอก key ที่ได้' }),
@@ -6389,6 +6817,22 @@
     inner.appendChild(s2);
     var s3 = h('div', { class: 'ob-step', hidden: true });
     inner.appendChild(s3);
+    var groqBtn = h('button', { class: 'primary', type: 'button', text: '🆓 ใช้ Qwen ฟรีผ่าน Groq (ไม่ผูกบัตร เครื่องไม่ร้อน)' });
+    var s2g = h('div', { class: 'ob-step', hidden: true });
+    groqBtn.addEventListener('click', function () {
+      S.model = GROQ_PREFIX + GROQ_DEFAULT_NAME; saveSettings();
+      buildGroqPanel(s2g, function () { if (canAsk()) { s3.hidden = false; renderProfileStep(s3); } });
+      s2g.insertBefore(h('h2', { text: 'ใช้ Qwen ฟรีผ่าน Groq' }), s2g.firstChild);
+      s2g.hidden = false;
+    });
+    var cloudBtn = h('button', { class: 'textbtn strong', type: 'button', text: '☁️ Qwen 3.5 9B ผ่าน OpenRouter (เสียเงินตามที่ใช้)' });
+    var s2c = h('div', { class: 'ob-step', hidden: true });
+    cloudBtn.addEventListener('click', function () {
+      S.model = CLOUD_PREFIX + CLOUD_DEFAULT_NAME; saveSettings();
+      buildCloudPanel(s2c, function () { if (canAsk()) { s3.hidden = false; renderProfileStep(s3); } });
+      s2c.insertBefore(h('h2', { text: 'ใช้ Qwen 3.5 9B บนคลาวด์' }), s2c.firstChild);
+      s2c.hidden = false;
+    });
     var localBtn = h('button', { class: 'textbtn strong', type: 'button', text: 'ไม่มี key? ใช้โมเดลในเครื่อง (Ollama) แทน' });
     var s2b = h('div', { class: 'ob-step', hidden: true });
     localBtn.addEventListener('click', function () {
@@ -6396,7 +6840,10 @@
       buildLocalPanel(s2b, null, true); s2b.insertBefore(h('h2', { text: 'ใช้โมเดลในเครื่อง' }), s2b.firstChild);
       s2b.hidden = false; s3.hidden = false; renderProfileStep(s3);
     });
-    inner.insertBefore(h('div', { class: 'row' }, [localBtn]), s3);
+    inner.insertBefore(h('div', { class: 'row' }, [groqBtn]), s3);
+    inner.insertBefore(h('div', { class: 'row' }, [cloudBtn, localBtn]), s3);
+    inner.insertBefore(s2g, s3);
+    inner.insertBefore(s2c, s3);
     inner.insertBefore(s2b, s3);
     go.addEventListener('click', async function () {
       var k = keyIn.value.trim();
@@ -6441,6 +6888,18 @@
   applyTheme();
   renderSubjects(); renderQuick(); renderMatChips(); updateTitle(); renderAll(); updateComposer();
   showView('chat');
+  if (/[?&]code=/.test(location.search)) {
+    cloudOAuthReturn().then(function (ok) {
+      if (ok) {
+        // signed in: on first start, skip straight to "tell พี่สาว about yourself"; otherwise just carry on chatting
+        var ob = $('onboard');
+        if (ob && !S.onboarded) { ob.innerHTML = ''; ob.hidden = false; var st = h('div', { class: 'ob-step' }); ob.appendChild(h('div', { class: 'ob-inner' }, [h('p', { class: 'okline', text: 'เชื่อม OpenRouter แล้ว ใช้ Qwen 3.5 9B บนคลาวด์ได้เลย' }), st])); renderProfileStep(st); }
+        else if (ob) ob.hidden = true;
+        updateComposer();
+      }
+      else if (!canAsk()) renderOnboarding();
+    });
+  }
   if (!canAsk()) renderOnboarding();
 
   async function refreshStreak() {

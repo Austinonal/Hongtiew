@@ -1,5 +1,6 @@
-/* Unnie Study service worker: keeps the app working offline; never caches API calls. */
-var CACHE = 'hongtiew-v3.3.3'; // keep in sync with VERSION in app.js
+/* Unnie Study service worker: keeps the app working offline; never caches API calls.
+   3.3.4: the app's own files load from the network first (cache only when offline), so an update shows up on the next open instead of the old version sticking around. */
+var CACHE = 'hongtiew-v3.3.4'; // keep in sync with VERSION in app.js
 var CORE = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'vendor/marked.min.js', 'vendor/purify.min.js', 'vendor/mathjax/tex-svg.js',
@@ -25,7 +26,7 @@ self.addEventListener('fetch', function (e) {
   if (url.origin !== self.location.origin && !isFont) return;
   e.respondWith(caches.open(CACHE).then(function (cache) {
     return cache.match(req, { ignoreSearch: url.origin === self.location.origin }).then(function (hit) {
-      var net = fetch(req).then(function (res) {
+      var net = fetch(req, isFont ? undefined : { cache: 'no-cache' }).then(function (res) {
         if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
         return res;
       }).catch(function () {
@@ -33,7 +34,10 @@ self.addEventListener('fetch', function (e) {
         if (req.mode === 'navigate') return cache.match('index.html');
         return Response.error();
       });
-      return hit || net;
+      if (isFont && hit) return hit; // fonts never change
+      // app files: wait up to 4 s for the network (fresh version), then fall back to the cached copy
+      if (!hit) return net;
+      return Promise.race([net, new Promise(function (r) { setTimeout(function () { r(hit); }, 4000); })]).then(function (res) { return res && res.ok ? res : hit; }, function () { return hit; });
     });
   }));
 });
