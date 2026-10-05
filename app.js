@@ -21,8 +21,9 @@
   var CLOUD_API = 'https://openrouter.ai/api/v1';
   var CLOUD_DEFAULT_NAME = 'qwen/qwen3.5-9b';
   var CLOUD_PRESETS = [
-    { id: 'qwen/qwen3.5-9b', name: 'Qwen 3.5 9B', note: 'เสียเงิน (ตัดจากเครดิต) รุ่นเดียวกับใน Ollama อ่านรูปได้ ราว 3–5 บาทต่อล้านโทเค็น', ctx: 262144 }
+    { id: 'qwen/qwen3.5-9b', name: 'Qwen 3.5 9B', note: 'เสียเงิน (ตัดจากเครดิต) รุ่นเดียวกับใน Ollama อ่านรูปได้ ราว 3–5 บาทต่อล้านโทเค็น', ctx: 262144, pin: 0.08e-6, pout: 0.13e-6, img: true }
   ];
+  var THB_PER_USD = 33; // rough, only for "≈ บาท" hints
   // 3.3.4: Groq's free plan (no credit card). Free-plan caps per model: 30 requests/min, 1,000 requests/day, 8,000 tokens/min, 200,000 tokens/day
   var GROQ_PREFIX = 'gq:';
   var GROQ_API = 'https://api.groq.com/openai/v1';
@@ -213,16 +214,16 @@
   // ---------- settings ----------
   var SETTINGS_KEY = 'ht2:settings';
   var S = (function () {
-    var d = { apiKey: '', model: DEFAULT_MODEL, thinking: 'auto', deepModel: '', showTok: true, codeExec: true, search: true, theme: 'system', subject: 'all', models: null, searchBlockedAt: 0, fileApiFailAt: 0, onboarded: false, local: { url: 'http://localhost:11434', ctx: 16384, models: [], eco: true }, cloud: { key: '', models: [] }, groq: { key: '', models: [] }, tb: { count: 10, level: 'exam', cards: 15, timed: false } };
+    var d = { apiKey: '', model: DEFAULT_MODEL, thinking: 'auto', deepModel: '', showTok: true, codeExec: true, search: true, theme: 'system', subject: 'all', models: null, searchBlockedAt: 0, fileApiFailAt: 0, onboarded: false, local: { url: 'http://localhost:11434', ctx: 16384, models: [], eco: true }, cloud: { key: '', models: [], meta: {} }, groq: { key: '', models: [], meta: {} }, tb: { count: 10, level: 'exam', cards: 15, timed: false } };
     try { var s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); Object.keys(s).forEach(function (k) { d[k] = s[k]; }); } catch (e) {}
     if (!d.tb || typeof d.tb !== 'object') d.tb = { count: 10, level: 'exam', cards: 15, timed: false };
     if (!d.local || typeof d.local !== 'object') d.local = {};
     d.local.url = d.local.url || 'http://localhost:11434'; d.local.ctx = +d.local.ctx || 16384; if (!Array.isArray(d.local.models)) d.local.models = [];
     if (typeof d.local.eco !== 'boolean') d.local.eco = true; // 3.3.4: "ถนอมเครื่อง" is on unless you turn it off
     if (!d.cloud || typeof d.cloud !== 'object') d.cloud = {};
-    d.cloud.key = str(d.cloud.key); if (!Array.isArray(d.cloud.models)) d.cloud.models = [];
+    d.cloud.key = str(d.cloud.key); if (!Array.isArray(d.cloud.models)) d.cloud.models = []; if (!d.cloud.meta || typeof d.cloud.meta !== 'object') d.cloud.meta = {};
     if (!d.groq || typeof d.groq !== 'object') d.groq = {};
-    d.groq.key = str(d.groq.key); if (!Array.isArray(d.groq.models)) d.groq.models = [];
+    d.groq.key = str(d.groq.key); if (!Array.isArray(d.groq.models)) d.groq.models = []; if (!d.groq.meta || typeof d.groq.meta !== 'object') d.groq.meta = {};
     if (!d.v315) { d.v315 = 1; d.thinking = 'auto'; } // 3.1.5: thinking level is chosen automatically unless set again
     return d;
   })();
@@ -249,18 +250,25 @@
     var ids = CLOUD_PRESETS.map(function (p) { return p.id; });
     S.cloud.models.forEach(function (n) { if (n && ids.indexOf(n) < 0) ids.push(n); });
     return ids.map(function (n) {
-      var p = CLOUD_PRESETS.filter(function (x) { return x.id === n; })[0];
-      return { id: CLOUD_PREFIX + n, label: '☁️ ' + (p ? p.name : n) + (/:free$/.test(n) ? ' (OpenRouter ฟรี จำกัดครั้งต่อวัน)' : ' (OpenRouter เสียเงินตามที่ใช้)'), inTok: p ? p.ctx : 0, cloud: true };
+      var p = orMeta(n);
+      return { id: CLOUD_PREFIX + n, label: '☁️ ' + (p.name || n) + (orFree(n) ? ' (OpenRouter ฟรี จำกัดครั้งต่อวัน)' : ' (OpenRouter เสียเงินตามที่ใช้' + (p.pin != null ? ' ' + usdPerM(p.pin) + '/' + usdPerM(p.pout) + ' ต่อล้าน' : '') + ')'), inTok: p.ctx || 0, cloud: true };
     });
   }
   function groqModelList() {
     var ids = GROQ_PRESETS.map(function (p) { return p.id; });
     S.groq.models.forEach(function (n) { if (n && ids.indexOf(n) < 0) ids.push(n); });
     return ids.map(function (n) {
-      var p = GROQ_PRESETS.filter(function (x) { return x.id === n; })[0];
-      return { id: GROQ_PREFIX + n, label: '🆓 ' + (p ? p.name : n) + ' (Groq ฟรี ไม่ผูกบัตร)', inTok: p ? p.ctx : 0, groq: true };
+      var p = gqMeta(n);
+      return { id: GROQ_PREFIX + n, label: '🆓 ' + (p.name || n) + ' (Groq ฟรี ไม่ผูกบัตร)', inTok: p.ctx || 0, groq: true };
     });
   }
+  // metadata of a model: the built-in preset, or what the app read when you added it (price, memory window, quota)
+  function orMeta(n) { return Object.assign({}, CLOUD_PRESETS.filter(function (x) { return x.id === n; })[0] || {}, S.cloud.meta[n] || {}); }
+  function gqMeta(n) { return Object.assign({}, GROQ_PRESETS.filter(function (x) { return x.id === n; })[0] || {}, S.groq.meta[n] || {}); }
+  function orFree(n) { var m = orMeta(n); return /:free$/.test(n) || (m.pin === 0 && m.pout === 0); }
+  function usdPerM(perTok) { var v = (+perTok || 0) * 1e6; return v === 0 ? 'ฟรี' : '$' + (v < 0.1 ? v.toFixed(3) : v < 10 ? v.toFixed(2) : v.toFixed(1)).replace(/\.?0+$/, ''); }
+  function fmtUsd(v) { v = +v || 0; return '$' + (v === 0 ? '0' : v < 0.01 ? v.toFixed(5) : v.toFixed(3)); }
+  function fmtThb(v) { var b = (+v || 0) * THB_PER_USD; return b < 1 ? (b * 100).toFixed(b * 100 < 1 ? 2 : 1) + ' สตางค์' : b.toFixed(2) + ' บาท'; }
   function allModels() { return groqModelList().concat(cloudModelList(), S.models && S.models.length ? S.models : FALLBACK_MODELS, localModelList()); }
   function localEco() { return S.local.eco !== false; }
 
@@ -601,13 +609,14 @@
   function recordUsage(model, u, sess, label, bd, level) {
     var i = u.promptTokenCount || 0, o = (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
     if (!i && !o) return;
-    U.lastUse = { label: label || 'แชตและเครื่องมือช่วยเรียน', model: model, i: i, o: o, t: Date.now(), bd: bd || null, level: level || '' };
+    var c = +u.costUsd || 0; // money spent on this request (OpenRouter paid models only)
+    U.lastUse = { label: label || 'แชตและเครื่องมือช่วยเรียน', model: model, i: i, o: o, c: c, t: Date.now(), bd: bd || null, level: level || '' };
     U.recent = (U.recent || []); U.recent.unshift(U.lastUse); U.recent.length = Math.min(U.recent.length, 10);
     // per chat: tokens at the first request, then the latest request (= how full the context is now)
     if (sess) { var t = sess.tok; sess.tok = { model: model, start: t && t.start ? t.start : i, cur: i, out: o, n: (t && t.n || 0) + 1 }; queueSave(); }
     var day = quotaDay(), d = U.days[day] || (U.days[day] = {}), m = d[model] || (d[model] = { i: 0, o: 0, n: 0 });
-    m.i += i; m.o += o; m.n++;
-    U.tot.i += i; U.tot.o += o; U.tot.n++;
+    m.i += i; m.o += o; m.n++; if (c) m.c = (m.c || 0) + c;
+    U.tot.i += i; U.tot.o += o; U.tot.n++; if (c) U.tot.c = (U.tot.c || 0) + c;
     Object.keys(U.days).sort().slice(0, -7).forEach(function (k) { delete U.days[k]; });
     saveUsage();
     if (usageListener) usageListener();
@@ -1066,8 +1075,47 @@
     var j = {}; try { j = await res.json(); } catch (e) {}
     return ((j && j.data) || []).map(function (m) { return str(m.id); });
   }
+  // ---- checking a model before it is added (3.3.4) ----
+  var orCatalog = null;
+  // OpenRouter's public model list (no key needed): price, memory window, image input
+  async function orLookup(id) {
+    if (!orCatalog || Date.now() - orCatalog.at > 30 * 60e3) {
+      var res; try { res = await fetch(CLOUD_API + '/models'); } catch (e) { throw apiError('cloud_down', String(e && e.message || e), { prov: 'or' }); }
+      if (!res.ok) throw await cloudHttpError(res, '', 'or');
+      var j = await res.json(); orCatalog = { at: Date.now(), list: (j && j.data) || [] };
+    }
+    var m = orCatalog.list.filter(function (x) { return x.id === id; })[0];
+    if (!m) {
+      var q = id.toLowerCase().split(/[\/:]/).pop().replace(/[^a-z0-9.]+/g, ' ').trim().split(' ')[0] || id.toLowerCase();
+      var sug = orCatalog.list.map(function (x) { return x.id; }).filter(function (x) { return x.toLowerCase().indexOf(q) >= 0; }).slice(0, 6);
+      throw apiError('nf', 'not found', { suggest: sug });
+    }
+    var pr = m.pricing || {}, mods = (m.architecture && m.architecture.input_modalities) || [];
+    return { name: str(m.name).replace(/^[^:]+:\s*/, '') || id, pin: +pr.prompt || 0, pout: +pr.completion || 0, ctx: +m.context_length || 0, maxOut: +(m.top_provider && m.top_provider.max_completion_tokens) || 0, img: mods.indexOf('image') >= 0, file: mods.indexOf('file') >= 0, checkedAt: Date.now() };
+  }
+  // Groq: the model must be in your account's list, then one tiny real request confirms it answers and shows its free quota
+  async function gqLookup(id) {
+    if (/whisper|guard|orpheus|tts|playai|distil/i.test(id)) throw apiError('nochat', 'not a chat model');
+    var res; try { res = await fetch(GROQ_API + '/models', { headers: cloudHeaders(S.groq.key) }); } catch (e) { throw apiError('cloud_down', String(e && e.message || e), { prov: 'gq' }); }
+    if (!res.ok) throw await cloudHttpError(res, '', 'gq');
+    var list = ((await res.json()).data) || [], m = list.filter(function (x) { return x.id === id; })[0];
+    if (!m) {
+      var q = id.toLowerCase().split('/').pop().split(/[-.]/)[0];
+      throw apiError('nf', 'not found', { suggest: list.map(function (x) { return x.id; }).filter(function (x) { return x.toLowerCase().indexOf(q) >= 0 && !/whisper|guard|orpheus|tts/i.test(x); }).slice(0, 6) });
+    }
+    var out = { name: id.split('/').pop(), ctx: +m.context_window || 0, maxOut: +m.max_completion_tokens || 0, checkedAt: Date.now(), works: null };
+    try {
+      var t = await fetch(GROQ_API + '/chat/completions', { method: 'POST', headers: cloudHeaders(S.groq.key), body: JSON.stringify({ model: id, messages: [{ role: 'user', content: 'Reply with: ok' }], max_completion_tokens: 24 }) });
+      out.works = t.ok || t.status === 429; out.status = t.status;
+      var rpd = +t.headers.get('x-ratelimit-limit-requests'), tpm = +t.headers.get('x-ratelimit-limit-tokens');
+      if (rpd) out.rpd = rpd; if (tpm) out.tpm = tpm;
+      if (!t.ok && t.status !== 429) { try { out.err = str(((await t.json()).error || {}).message); } catch (e) {} }
+    } catch (e) { out.works = null; }
+    return out;
+  }
+  function todayOf(prefix) { var d = U.days[quotaDay()] || {}, r = { tok: 0, n: 0, c: 0 }; Object.keys(d).forEach(function (k) { if (k.indexOf(prefix) === 0) { r.tok += d[k].i + d[k].o; r.n += d[k].n; r.c += d[k].c || 0; } }); return r; }
   // tokens and requests this browser sent to one model today (Groq's own counter can differ a little: it is per account and rolling)
-  function usedTodayOf(id) { var u = (U.days[quotaDay()] || {})[id] || { i: 0, o: 0, n: 0 }; return { tok: u.i + u.o, n: u.n }; }
+  function usedTodayOf(id) { var u = (U.days[quotaDay()] || {})[id] || { i: 0, o: 0, n: 0 }; return { tok: u.i + u.o, n: u.n, c: u.c || 0 }; }
   function b64url(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   var OR_VERIFIER = 'ht2:or-verifier';
   // one-tap sign in: OpenRouter asks you to log in, then sends you back here with a code that becomes your key (OAuth PKCE)
@@ -1198,7 +1246,10 @@
     var think = tlevel !== 'low';
     // Groq free plan: reserve the answer length, give the rest of the 8,000 tokens/min to the prompt
     var maxOut = o.schema ? 4800 : 2400, shrink = 1;
-    function promptTok() { return Math.floor((GROQ_TPM - maxOut - 400) * shrink); }
+    var tpm = groq ? (gqMeta(name).tpm || GROQ_TPM) : GROQ_TPM; // a model's own per-minute cap, read when you added it
+    if (groq && tpm < 6000) maxOut = Math.min(maxOut, Math.floor(tpm * 0.35));
+    if (groq && gqMeta(name).maxOut) maxOut = Math.min(maxOut, gqMeta(name).maxOut);
+    function promptTok() { return Math.floor((tpm - maxOut - 400) * shrink); }
     var fixedTok = estTok(o.system) + (o.schema ? estTok(JSON.stringify(o.schema)) + 60 : 0) + 250;
     function histChars() { return Math.max(800, Math.floor((promptTok() - fixedTok) * 2.3)); } // history is mostly Thai
     var flags = { thinking: true, code: false, search: false, reupload: false, notes: [], reasoning: true, json: o.schema ? 'schema' : '', pdf: !groq, images: !groq, retried: false, shrunk: false };
@@ -1253,7 +1304,10 @@
         }
       }
     } finally {
-      if (acc.usage) { acc.bd = usageBreakdown(o.system, contents, acc.usage); recordUsage(useModel, acc.usage, sess, o.label, acc.bd, think ? tlevel : 'low'); }
+      if (acc.usage) {
+        if (!groq && !orFree(name)) { var mt = orMeta(name); acc.usage.costUsd = acc.cost != null ? acc.cost : (mt.pin != null ? acc.usage.promptTokenCount * mt.pin + (acc.usage.candidatesTokenCount + acc.usage.thoughtsTokenCount) * mt.pout : 0); }
+        acc.bd = usageBreakdown(o.system, contents, acc.usage); recordUsage(useModel, acc.usage, sess, o.label, acc.bd, think ? tlevel : 'low');
+      }
     }
     if (groq && acc.finishReason === 'MAX_TOKENS' && o.schema) flags.notes.push('คำตอบยาวเกินที่โควตาฟรีของ Groq รับได้ต่อครั้ง ลองลดจำนวนข้อหรือจำนวนบัตรลง');
     acc.notes = flags.notes; acc.model = useModel; acc.level = think && flags.reasoning ? tlevel : null;
@@ -2485,7 +2539,7 @@
         } else throw e;
       }
       var u = acc.usage || {};
-      am.usage = { i: u.promptTokenCount || 0, t: u.thoughtsTokenCount || 0, a: u.candidatesTokenCount || 0, model: acc.model || useModel, level: acc.level || '', why: auto ? cls.why : 'ตั้งไว้เอง', auto: auto, deep: !!gen.deep, route: routeTok };
+      am.usage = { i: u.promptTokenCount || 0, t: u.thoughtsTokenCount || 0, a: u.candidatesTokenCount || 0, c: +u.costUsd || 0, model: acc.model || useModel, level: acc.level || '', why: auto ? cls.why : 'ตั้งไว้เอง', auto: auto, deep: !!gen.deep, route: routeTok };
       checkFinish(acc);
       am.content = acc.text; am.thoughts = acc.thoughts;
       if (acc.code.length) am.code = acc.code;
@@ -2561,7 +2615,7 @@
 
   function usageLine(u) {
     var think = u.deep ? 'คิดลึก' : 'การคิด: ' + (THINK_LABEL[u.level] || 'ปิด') + (u.auto ? ' (' + u.why + ')' : '');
-    return think + ' · ใช้ ' + fmtNum(u.i + u.t + u.a) + ' โทเค็น (ส่ง ' + fmtNum(u.i) + ' · คิด ' + fmtNum(u.t) + ' · ตอบ ' + fmtNum(u.a) + ')' + (u.route ? ' · เลือกหน้าไฟล์เพิ่ม ' + fmtNum(u.route) : '');
+    return think + ' · ใช้ ' + fmtNum(u.i + u.t + u.a) + ' โทเค็น (ส่ง ' + fmtNum(u.i) + ' · คิด ' + fmtNum(u.t) + ' · ตอบ ' + fmtNum(u.a) + ')' + (u.route ? ' · เลือกหน้าไฟล์เพิ่ม ' + fmtNum(u.route) : '') + (u.c ? ' · ค่าใช้จ่าย ≈ ' + fmtUsd(u.c) + ' (' + fmtThb(u.c) + ')' : '');
   }
   // asks the last question again with an override: { full: true } sends whole files, { deep: true } thinks as deeply as possible
   function regenerate(over) {
@@ -5164,6 +5218,62 @@
     ]));
   }
 
+  // "add another model": type the name -> the app checks it with the service first -> shows price / memory / limits -> you confirm
+  function modelAdder(cfg) {
+    var input = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', placeholder: cfg.placeholder, 'aria-label': 'ชื่อรุ่นที่จะเพิ่ม' });
+    var go = h('button', { class: 'textbtn strong', type: 'button', text: 'ตรวจรุ่นนี้' });
+    var out = h('div');
+    var wrap = h('details', { class: 'bd-recent' }, [h('summary', { text: cfg.title }),
+      h('ol', { class: 'muted', style: 'margin:6px 0;padding-left:20px;display:grid;gap:4px' }, cfg.steps.map(function (t) { return h('li', { html: t }); })),
+      h('div', { class: 'keyrow' }, [input, go]), out]);
+    async function verify() {
+      var id = cfg.normalize(input.value);
+      if (!id) { out.innerHTML = ''; out.appendChild(h('p', { class: 'badline', text: cfg.badFormat })); return; }
+      input.value = id; go.disabled = true; out.innerHTML = ''; out.appendChild(h('p', { class: 'muted', text: 'กำลังตรวจรุ่น ' + id + ' กับ ' + cfg.service + '…' }));
+      try {
+        var meta = await cfg.verify(id);
+        out.innerHTML = '';
+        var block = cfg.card(id, meta); // { lines: [[label, value]], warn: [], ok: bool, blockMsg }
+        var box = h('div', { class: 'lm-help' }, [h('b', { text: (block.ok ? '✓ พบรุ่นนี้: ' : '✕ ใช้รุ่นนี้ไม่ได้: ') + (meta.name || id) })]);
+        box.appendChild(h('div', { class: 'muted', style: 'font-size:.82rem;word-break:break-all', text: id }));
+        block.lines.forEach(function (l) { box.appendChild(h('div', { class: 'mc-row' }, [h('span', { class: 'k', text: l[0] }), h('span', { class: 'v', text: l[1] })])); });
+        block.warn.forEach(function (w) { box.appendChild(h('p', { class: 'badline', style: 'margin:6px 0 0', text: w })); });
+        var acts = [];
+        if (block.ok) acts.push(h('button', { class: 'primary', type: 'button', text: block.warn.length ? 'เข้าใจแล้ว เพิ่มและใช้รุ่นนี้' : 'ยืนยัน เพิ่มและใช้รุ่นนี้', onclick: function () { cfg.add(id, meta); input.value = ''; out.innerHTML = ''; wrap.open = false; } }));
+        acts.push(h('button', { class: 'textbtn', type: 'button', text: 'ยกเลิก', onclick: function () { out.innerHTML = ''; } }));
+        box.appendChild(h('div', { class: 'row', style: 'margin-top:8px' }, acts));
+        out.appendChild(box);
+      } catch (e) {
+        out.innerHTML = '';
+        if (e.code === 'nf') {
+          out.appendChild(h('p', { class: 'badline', text: cfg.service + ' ไม่มีรุ่นชื่อ ' + id + ' ตรวจตัวสะกด (ตัวเล็กตัวใหญ่ ขีด จุด) ให้ตรงกับที่ ' + cfg.service + ' เขียนทุกตัว' }));
+          if (e.suggest && e.suggest.length) out.appendChild(h('div', { class: 'row' }, [h('span', { class: 'muted', text: 'หรือหมายถึง:' })].concat(e.suggest.map(function (sId) { return h('button', { class: 'textbtn', type: 'button', text: sId, onclick: function () { input.value = sId; verify(); } }); }))));
+        } else if (e.code === 'nochat') out.appendChild(h('p', { class: 'badline', text: 'รุ่นนี้ไม่ใช่โมเดลแชต (เช่น ถอดเสียง หรือกรองข้อความ) ใช้คุยกับพี่สาวไม่ได้' }));
+        else out.appendChild(h('p', { class: 'badline', text: e.code === 'cloud_key' ? 'ต้องใส่ key ที่ใช้ได้ด้านบนก่อน แอปถึงจะตรวจรุ่นให้ได้' : errorCopy(e) }));
+      }
+      go.disabled = false;
+    }
+    go.addEventListener('click', verify);
+    input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); verify(); } });
+    return wrap;
+  }
+  function removeCustom(list, metaStore, prefix, n, def) {
+    var i = list.indexOf(n); if (i >= 0) list.splice(i, 1); delete metaStore[n];
+    if (S.model === prefix + n) S.model = prefix + def;
+    saveSettings();
+  }
+
+  // 📖 where to browse models, what each costs, how to add one (settings > โมเดล)
+  function modelGuide() {
+    var row = function (title, html) { return h('div', { class: 'lm-help', style: 'margin-top:8px' }, [h('b', { text: title }), h('div', { class: 'muted', style: 'margin-top:4px', html: html })]); };
+    return h('details', { class: 'bd-recent', style: 'margin-bottom:10px' }, [h('summary', { text: '📖 เว็บดูโมเดล + วิธีเพิ่มโมเดลอื่น + ราคาและข้อจำกัด' }),
+      row('🆓 Groq — ฟรีทุกรุ่น ไม่ผูกบัตร', 'ดูรุ่น: <a href="https://console.groq.com/docs/models" target="_blank" rel="noopener">console.groq.com/docs/models</a> · โควตาของคุณ: <a href="https://console.groq.com/settings/limits" target="_blank" rel="noopener">console.groq.com/settings/limits</a><br>เพิ่มรุ่น: คัดลอก <b>Model ID</b> → ตั้งค่า > Groq > "เพิ่มรุ่นอื่นจาก Groq" → วาง → <b>ตรวจรุ่นนี้</b> (แอปลองเรียกจริงให้) → ยืนยัน<br>ข้อจำกัด: ราว 30 ครั้ง/นาที · 1,000 ครั้ง/วัน · 8,000 โทเค็น/นาที · 200,000 โทเค็น/วัน ต่อรุ่น อ่านรูป/PDF ไม่ได้'),
+      row('☁️ OpenRouter — มีทั้งฟรีและเสียเงิน', 'ดูรุ่นทั้งหมด: <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a> · เฉพาะรุ่นฟรี: <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">openrouter.ai/models?max_price=0</a><br>เพิ่มรุ่น: กดคัดลอกชื่อรุ่น (เช่น <code>qwen/qwen3.5-27b</code>) → ตั้งค่า > โมเดลบนคลาวด์ > "เพิ่มรุ่นอื่นจาก OpenRouter" → วาง → <b>ตรวจรุ่นนี้</b> แอปจะบอกราคา ความจำ อ่านรูปได้ไหม และเตือนถ้าเสียเงิน → ยืนยัน<br>ราคา: <b>ลงท้าย <code>:free</code> = ฟรี</b> (20 ครั้ง/นาที, 50 ครั้ง/วัน หรือ 1,000 ถ้าเคยเติมรวม ≥ 10 ดอลลาร์) รุ่นอื่นตัดจากเครดิตตามราคา Input/Output ต่อล้านโทเค็น'),
+      row('✨ Gemini — ฟรี (ถ้าไม่เปิด billing)', 'ดูรุ่น: <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/models</a> · โควตา: <a href="https://aistudio.google.com/usage" target="_blank" rel="noopener">aistudio.google.com/usage</a><br>เพิ่มรุ่น: ไม่ต้องพิมพ์ ใส่ key แล้วกด "บันทึกและตรวจสอบ" แอปโหลดรายการรุ่นที่ key ของคุณใช้ได้ให้เอง เลือกจากรายการด้านล่าง<br>ราคา: รุ่น Flash ใช้ฟรีในโควตา รุ่น Pro ต้องเปิด billing (เสียเงิน)'),
+      row('💻 Ollama — ฟรี รันในเครื่อง', 'ดูรุ่น: <a href="https://ollama.com/search" target="_blank" rel="noopener">ollama.com/search</a> (กดรุ่น > แท็บ Tags ดูขนาดไฟล์)<br>เพิ่มรุ่น: เปิด Command Prompt/Terminal พิมพ์ <code>ollama pull ชื่อรุ่น</code> (เช่น <code>ollama pull qwen3.5:4b</code>) → กลับมากด "ตรวจการเชื่อมต่อและโหลดรายการโมเดล" แอปจะเห็นรุ่นที่ติดตั้งแล้วเอง<br>ข้อจำกัด: ขนาดไฟล์ ≈ แรม/VRAM ที่ต้องมี รุ่นใหญ่ทำให้เครื่องร้อนและช้า'),
+      row('🔢 นับโทเค็นและค่าใช้จ่าย', 'ใต้ทุกคำตอบบอกจำนวนโทเค็น (ส่ง · คิด · ตอบ) และค่าใช้จ่ายถ้าเป็นรุ่นเสียเงิน · การ์ดด้านล่างบอกยอดวันนี้ของรุ่นที่เลือก · ส่วน Groq และ OpenRouter บอกยอดวันนี้เทียบโควตา/เงินที่ใช้ ตัวเลขนับจากเครื่องนี้ ยอดจริงดูที่เว็บของผู้ให้บริการ')
+    ]);
+  }
   // Groq panel (settings + first start): paste a free key, pick Qwen 3.8 27B
   function buildGroqPanel(box, onChange) {
     box.innerHTML = '';
@@ -5183,24 +5293,48 @@
     var list = h('div', { class: 'lm-list' });
     box.appendChild(list);
     box.appendChild(today);
-    var custom = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', placeholder: 'เช่น openai/gpt-oss-20b', 'aria-label': 'ชื่อรุ่นอื่นจาก Groq' });
-    var addBtn = h('button', { class: 'textbtn', type: 'button', text: 'เพิ่มและใช้รุ่นนี้' });
-    box.appendChild(h('details', { class: 'bd-recent' }, [h('summary', { text: 'ใช้รุ่นอื่นจาก Groq' }),
-      h('p', { class: 'muted', html: 'ดูรุ่นที่ใช้ได้และโควตาของบัญชีคุณที่ <a href="https://console.groq.com/settings/limits" target="_blank" rel="noopener">console.groq.com/settings/limits</a> แต่ละรุ่นมีโควตาแยกกัน ถ้ารุ่นหนึ่งใช้ครบวันแล้ว สลับไปอีกรุ่นได้' }),
-      h('div', { class: 'keyrow' }, [custom, addBtn])]));
+    box.appendChild(modelAdder({
+      title: 'เพิ่มรุ่นอื่นจาก Groq (แอปตรวจให้ก่อน)', service: 'Groq', placeholder: 'เช่น openai/gpt-oss-20b',
+      steps: ['ดูรายชื่อรุ่นที่ <a href="https://console.groq.com/docs/models" target="_blank" rel="noopener">console.groq.com/docs/models</a> คัดลอกช่อง <b>Model ID</b> (เช่น <code>openai/gpt-oss-20b</code>) ใช้ได้เฉพาะรุ่นแชต ไม่ใช่ Whisper/Guard/TTS',
+        'ดูโควตาฟรีของแต่ละรุ่นที่ <a href="https://console.groq.com/settings/limits" target="_blank" rel="noopener">console.groq.com/settings/limits</a> (ครั้งต่อนาที/วัน โทเค็นต่อนาที/วัน)',
+        'วางชื่อรุ่นในช่องด้านล่าง กด <b>ตรวจรุ่นนี้</b> แอปจะเช็กว่าบัญชีคุณมีรุ่นนี้ และลองเรียกจริง 1 ครั้ง (ใช้โควตาไม่ถึง 50 โทเค็น)',
+        'ดูผลตรวจ (ความจำ โควตา) แล้วกด <b>ยืนยัน</b> รุ่นนั้นจะถูกเลือกใช้ทันที และอยู่ในรายการ "โมเดล" ด้านล่างด้วย ทุกรุ่นของ Groq ฟรี'],
+      badFormat: 'ใส่ชื่อรุ่นตามช่อง Model ID ของ Groq เช่น openai/gpt-oss-20b',
+      normalize: function (v) { v = str(v).trim().replace(/^gq:/, '').replace(/^["'`]+|["'`]+$/g, ''); return /^[\w.\/:-]+$/.test(v) ? v : ''; },
+      verify: function (id) { if (!S.groq.key) return Promise.reject(apiError('cloud_key', 'no key')); return gqLookup(id); },
+      card: function (id, m) {
+        var fmt = function (n) { return Math.round(+n || 0).toLocaleString('en-US'); }, lines = [['ราคา', 'ฟรี (แพ็กเกจฟรีของ Groq ไม่มีการตัดเงิน)']], warn = [];
+        if (m.ctx) lines.push(['ความจำสูงสุด', fmt(m.ctx) + ' โทเค็น (แต่แพ็กเกจฟรีส่งได้ครั้งละไม่เกินเพดานต่อนาที)']);
+        if (m.maxOut) lines.push(['ตอบยาวสุด', fmt(m.maxOut) + ' โทเค็น']);
+        lines.push(['โควตาฟรี', (m.rpd ? fmt(m.rpd) + ' ครั้งต่อวัน' : 'ครั้งต่อวัน: ดูที่ console.groq.com/settings/limits') + ' · ' + (m.tpm ? fmt(m.tpm) + ' โทเค็นต่อนาที' : 'โทเค็นต่อนาที: ดูที่หน้าเดียวกัน')]);
+        lines.push(['ลองเรียกจริง', m.works === true ? (m.status === 429 ? 'รุ่นนี้มีจริง แต่ตอนนี้ติดโควตาอยู่ (ลองใหม่ภายหลังได้)' : 'ตอบได้ ✓') : m.works === false ? 'เรียกไม่ได้ (' + (m.err || 'HTTP ' + m.status) + ')' : 'ทดสอบไม่ได้ (เน็ตหรือเบราว์เซอร์บล็อก) แต่รุ่นนี้อยู่ในบัญชีคุณ']);
+        lines.push(['อ่านรูป/PDF', 'ไม่ได้ (แอปส่งเฉพาะข้อความให้ Groq)']);
+        if (m.tpm && m.tpm < 6000) warn.push('เพดานต่อนาทีของรุ่นนี้ต่ำ (' + fmt(m.tpm) + ' โทเค็น) แอปจะส่งประวัติแชตได้สั้นมาก และคำตอบจะสั้นลง');
+        if (/preview|qwen|kimi|llama-4/i.test(id) && !/gpt-oss/.test(id)) warn.push('ถ้าเป็นรุ่นทดลอง (Preview) Groq อาจถอดออกโดยไม่บอกล่วงหน้า');
+        return { lines: lines, warn: warn, ok: m.works !== false };
+      },
+      add: function (id, m) {
+        if (S.groq.models.indexOf(id) < 0 && !GROQ_PRESETS.some(function (p) { return p.id === id; })) S.groq.models.push(id);
+        S.groq.meta[id] = { name: m.name, ctx: m.ctx, maxOut: m.maxOut, rpd: m.rpd, tpm: m.tpm, checkedAt: m.checkedAt };
+        pick(id);
+      }
+    }));
     var avail = null;
     function pick(n) { S.model = GROQ_PREFIX + n; saveSettings(); paint(); if (onChange) onChange(); showToast(S.groq.key ? 'ใช้ ' + n + ' (Groq ฟรี) แล้ว พิมพ์ถามพี่สาวได้เลย' : 'เลือก ' + n + ' แล้ว วาง Groq key ก่อนนะ'); }
     function paint() {
       list.innerHTML = '';
       groqModelList().forEach(function (m) {
-        var n = m.id.slice(GROQ_PREFIX.length), on = S.model === m.id, p = GROQ_PRESETS.filter(function (x) { return x.id === n; })[0];
-        var gone = avail && avail.indexOf(n) < 0;
+        var n = m.id.slice(GROQ_PREFIX.length), on = S.model === m.id, p = gqMeta(n), preset = GROQ_PRESETS.some(function (x) { return x.id === n; });
+        var gone = avail && avail.indexOf(n) < 0, fmt = function (n) { return Math.round(+n || 0).toLocaleString('en-US'); };
+        var note = gone ? 'ตอนนี้ Groq ไม่มีรุ่นนี้ให้บัญชีของคุณแล้ว เลือกรุ่นอื่น' : (p.note || ('ฟรี · รุ่นที่คุณเพิ่มเอง' + (p.ctx ? ' · ความจำ ' + fmt(p.ctx) : '') + (p.tpm ? ' · ' + fmt(p.tpm) + ' โทเค็น/นาที' : '') + (p.rpd ? ' · ' + fmt(p.rpd) + ' ครั้ง/วัน' : '')));
         list.appendChild(h('div', { class: 'lm-item' + (on ? ' on' : '') }, [
-          h('span', null, [h('b', { text: p ? p.name : n }), h('div', { class: gone ? 'badline' : 'muted', style: 'font-size:.82rem', text: gone ? 'ตอนนี้ Groq ไม่มีรุ่นนี้ให้บัญชีของคุณแล้ว เลือกรุ่นอื่น' : (p ? p.note : 'รุ่นที่คุณเพิ่มเอง') })]),
-          h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () { pick(n); } })]));
+          h('span', null, [h('b', { text: p.name || n }), h('div', { class: gone ? 'badline' : 'muted', style: 'font-size:.82rem', text: note })]),
+          h('span', { class: 'row', style: 'flex-shrink:0;gap:6px;margin:0' }, [
+            preset ? null : h('button', { class: 'textbtn', type: 'button', text: '✕', title: 'ลบรุ่นนี้ออกจากรายการ', 'aria-label': 'ลบ ' + n, onclick: function () { removeCustom(S.groq.models, S.groq.meta, GROQ_PREFIX, n, GROQ_DEFAULT_NAME); paint(); if (onChange) onChange(); } }),
+            h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () { pick(n); } })])]));
       });
       var fmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
-      if (isGroq(S.model)) { var u = usedTodayOf(S.model); today.textContent = 'วันนี้ใช้รุ่นนี้ไป ' + fmt(u.tok) + ' / ' + fmt(GROQ_TPD) + ' โทเค็น · ' + u.n + ' / ' + fmt(GROQ_RPD) + ' ครั้ง (นับจากเครื่องนี้ ตัวเลขจริงดูที่ console.groq.com)'; }
+      if (isGroq(S.model)) { var u = usedTodayOf(S.model), gm = gqMeta(S.model.slice(GROQ_PREFIX.length)); today.textContent = 'วันนี้ใช้รุ่นนี้ไป ' + fmt(u.tok) + ' / ' + fmt(GROQ_TPD) + ' โทเค็น · ' + u.n + ' / ' + fmt(gm.rpd || GROQ_RPD) + ' ครั้ง · ค่าใช้จ่าย 0 บาท (นับจากเครื่องนี้ ตัวเลขจริงดูที่ console.groq.com)'; }
       else today.textContent = '';
     }
     async function check(k, pickIt) {
@@ -5217,12 +5351,6 @@
       var k = keyIn.value.trim();
       if (!k) { S.groq.key = ''; saveSettings(); status.className = 'badline'; status.textContent = 'ลบ key แล้ว'; if (onChange) onChange(); return; }
       check(k, true);
-    });
-    addBtn.addEventListener('click', function () {
-      var n = custom.value.trim().replace(/^gq:/, '');
-      if (!/^[\w.\/:-]+$/.test(n)) { showToast('ใส่ชื่อรุ่นตามที่ Groq เขียน เช่น openai/gpt-oss-20b'); return; }
-      if (S.groq.models.indexOf(n) < 0 && !GROQ_PRESETS.some(function (p) { return p.id === n; })) S.groq.models.push(n);
-      custom.value = ''; pick(n);
     });
     paint();
     if (S.groq.key) check(S.groq.key);
@@ -5243,21 +5371,56 @@
     box.appendChild(h('div', { class: 'row' }, [save, status]));
     var list = h('div', { class: 'lm-list' });
     box.appendChild(list);
-    var custom = h('input', { class: 'text', type: 'text', spellcheck: 'false', autocomplete: 'off', placeholder: 'เช่น qwen/qwen3.5-27b หรือรุ่นที่ลงท้าย :free', 'aria-label': 'ชื่อรุ่นอื่นจาก OpenRouter' });
-    var addBtn = h('button', { class: 'textbtn', type: 'button', text: 'เพิ่มและใช้รุ่นนี้' });
-    box.appendChild(h('details', { class: 'bd-recent' }, [h('summary', { text: 'ใช้รุ่นอื่นจาก OpenRouter' }),
-      h('p', { class: 'muted', html: 'ดูชื่อรุ่นได้ที่ <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">openrouter.ai/models</a> (กดคัดลอกชื่อรุ่น) <b>เฉพาะรุ่นที่ลงท้ายด้วย <code>:free</code> เท่านั้นที่ไม่เสียเงิน</b> ได้ 20 ครั้งต่อนาที และ 50 ครั้งต่อวัน (1,000 ครั้งต่อวันถ้าเคยเติมเครดิตรวม 10 ดอลลาร์ขึ้นไป) ถ้าเครดิตติดลบ รุ่นฟรีก็ใช้ไม่ได้' }),
-      h('div', { class: 'keyrow' }, [custom, addBtn])]));
+    var spend = h('div', { class: 'muted', style: 'margin-top:6px' });
+    box.appendChild(spend);
+    box.appendChild(modelAdder({
+      title: 'เพิ่มรุ่นอื่นจาก OpenRouter (แอปตรวจราคาให้ก่อน)', service: 'OpenRouter', placeholder: 'เช่น qwen/qwen3.5-27b หรือ ...:free',
+      steps: ['เปิด <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a> ถ้าอยากได้เฉพาะรุ่นฟรี ใช้ <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">ลิงก์นี้</a> (กรองราคา 0) ค้นชื่อ เช่น qwen',
+        'กดเข้าไปที่รุ่นนั้น ดู <b>ราคา Input/Output ต่อ 1M tokens</b> ความจำ (Context) และ Input ว่ามี image ไหม แล้วกดไอคอนคัดลอกข้างชื่อรุ่น จะได้แบบ <code>qwen/qwen3.5-27b</code>',
+        'วางในช่องด้านล่าง (วางลิงก์ทั้งหน้าก็ได้) กด <b>ตรวจรุ่นนี้</b> แอปจะเช็กกับ OpenRouter ว่ามีรุ่นนี้จริง และบอกราคา ความจำ อ่านรูปได้ไหม ก่อนเพิ่ม',
+        '<b>ชื่อที่ลงท้าย <code>:free</code> เท่านั้นที่ฟรี</b> รุ่นอื่นตัดเงินจากเครดิต ถ้าแอปขึ้นคำเตือนสีแดง อ่านก่อนกดยืนยัน'],
+      badFormat: 'ชื่อรุ่นต้องเป็นแบบ ผู้ผลิต/ชื่อรุ่น เช่น qwen/qwen3.5-27b (คัดลอกจากหน้ารุ่นใน OpenRouter)',
+      normalize: function (v) { v = str(v).trim().replace(/^or:/, '').replace(/^https?:\/\/(www\.)?openrouter\.ai\//, '').replace(/[?#].*$/, '').replace(/\/(api|providers|activity|apps|uptime)$/, '').replace(/^["'`]+|["'`]+$/g, ''); return /^[\w.-]+\/[\w.:-]+$/.test(v) ? v : ''; },
+      verify: orLookup,
+      card: function (id, m) {
+        var fmt = function (n) { return Math.round(+n || 0).toLocaleString('en-US'); }, free = /:free$/.test(id) || (m.pin === 0 && m.pout === 0), lines = [], warn = [];
+        if (free) lines.push(['ราคา', 'ฟรี (ไม่ตัดเครดิต) · จำกัด 20 ครั้ง/นาที และ 50 ครั้ง/วัน (1,000 ครั้ง/วัน ถ้าเคยเติมรวม 10 ดอลลาร์ขึ้นไป)']);
+        else {
+          var per = 6000 * m.pin + 800 * m.pout;
+          lines.push(['ราคา', 'ขาเข้า ' + usdPerM(m.pin) + ' · ขาออก ' + usdPerM(m.pout) + ' ต่อล้านโทเค็น']);
+          lines.push(['ต่อข้อความ', '≈ ' + fmtUsd(per) + ' (' + fmtThb(per) + ')']);
+          lines.push(['', 'ประมาณจากแชตทั่วไป 6,000 โทเค็นเข้า + 800 ออก แชตยาวหรือแนบไฟล์จะแพงขึ้น']);
+          warn.push('⚠️ รุ่นนี้เสียเงิน ตัดจากเครดิต OpenRouter ทุกครั้งที่ถาม (ถ้าเครดิตเป็น 0 จะใช้ไม่ได้และไม่โดนเก็บเงิน) ถ้าไม่อยากเสียเงิน เลือกรุ่นที่ลงท้าย :free');
+          if (m.pout > 5e-6 || m.pin > 2e-6) warn.push('⚠️ รุ่นนี้แพงกว่า Qwen 3.5 9B ราว ' + Math.round((m.pin * 6000 + m.pout * 800) / (0.08e-6 * 6000 + 0.13e-6 * 800)) + ' เท่า');
+        }
+        if (m.ctx) lines.push(['ความจำสูงสุด', fmt(m.ctx) + ' โทเค็น']);
+        if (m.maxOut) lines.push(['ตอบยาวสุด', fmt(m.maxOut) + ' โทเค็น']);
+        lines.push(['อ่านรูป', m.img ? 'ได้' : 'ไม่ได้ (ส่งได้แต่ข้อความ)']);
+        lines.push(['อ่าน PDF', 'ได้ ผ่านตัวแปลง PDF ฟรีของ OpenRouter']);
+        if (free) warn.push('รุ่นฟรีมักช้าหรือเต็มช่วงคนใช้เยอะ และ OpenRouter ถอดรุ่นฟรีได้ทุกเมื่อ ถ้าเครดิตติดลบ รุ่นฟรีก็ใช้ไม่ได้');
+        return { lines: lines, warn: warn, ok: true };
+      },
+      add: function (id, m) {
+        if (S.cloud.models.indexOf(id) < 0 && !CLOUD_PRESETS.some(function (p) { return p.id === id; })) S.cloud.models.push(id);
+        S.cloud.meta[id] = { name: m.name, pin: m.pin, pout: m.pout, ctx: m.ctx, maxOut: m.maxOut, img: m.img, checkedAt: m.checkedAt };
+        pick(id);
+      }
+    }));
 
     function pick(n) { S.model = CLOUD_PREFIX + n; saveSettings(); paint(); if (onChange) onChange(); showToast(S.cloud.key ? 'ใช้ ' + n + ' บนคลาวด์แล้ว พิมพ์ถามพี่สาวได้เลย' : 'เลือก ' + n + ' แล้ว เชื่อมบัญชี OpenRouter ก่อนนะ'); }
     function paint() {
       list.innerHTML = '';
       cloudModelList().forEach(function (m) {
-        var n = m.id.slice(CLOUD_PREFIX.length), on = S.model === m.id, p = CLOUD_PRESETS.filter(function (x) { return x.id === n; })[0];
+        var n = m.id.slice(CLOUD_PREFIX.length), on = S.model === m.id, p = orMeta(n), preset = CLOUD_PRESETS.some(function (x) { return x.id === n; }), fmt = function (n) { return Math.round(+n || 0).toLocaleString('en-US'); };
+        var note = p.note || ((orFree(n) ? 'ฟรี (:free) จำกัดครั้งต่อวัน' : 'เสียเงิน ' + (p.pin != null ? usdPerM(p.pin) + ' / ' + usdPerM(p.pout) + ' ต่อล้านโทเค็น' : '')) + ' · รุ่นที่คุณเพิ่มเอง' + (p.ctx ? ' · ความจำ ' + fmt(p.ctx) : '') + (p.img ? ' · อ่านรูปได้' : ''));
         list.appendChild(h('div', { class: 'lm-item' + (on ? ' on' : '') }, [
-          h('span', null, [h('b', { text: p ? p.name : n }), h('div', { class: 'muted', style: 'font-size:.82rem', text: p ? p.note : 'รุ่นที่คุณเพิ่มเอง' })]),
-          h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () { pick(n); } })]));
+          h('span', null, [h('b', { text: p.name || n }), h('div', { class: 'muted', style: 'font-size:.82rem', text: note })]),
+          h('span', { class: 'row', style: 'flex-shrink:0;gap:6px;margin:0' }, [
+            preset ? null : h('button', { class: 'textbtn', type: 'button', text: '✕', title: 'ลบรุ่นนี้ออกจากรายการ', 'aria-label': 'ลบ ' + n, onclick: function () { removeCustom(S.cloud.models, S.cloud.meta, CLOUD_PREFIX, n, CLOUD_DEFAULT_NAME); paint(); if (onChange) onChange(); } }),
+            h('button', { class: on ? 'textbtn' : 'primary', type: 'button', text: on ? '✓ ใช้อยู่' : 'ใช้ตัวนี้', onclick: function () { pick(n); } })])]));
       });
+      var t = todayOf(CLOUD_PREFIX), fmt = function (n) { return Math.round(+n || 0).toLocaleString('en-US'); };
+      spend.textContent = 'วันนี้ใช้ OpenRouter ไป ' + fmt(t.tok) + ' โทเค็น · ' + t.n + ' ครั้ง · ค่าใช้จ่ายประมาณ ' + fmtUsd(t.c) + ' (' + fmtThb(t.c) + ') · ตั้งแต่เริ่มนับ ' + fmtUsd(U.tot.c || 0) + ' (นับจากเครื่องนี้ ยอดจริงดูที่ openrouter.ai/activity)';
     }
     function money(n) { return '$' + (Math.round(n * 100) / 100).toFixed(2); }
     async function check(k, pickIt) {
@@ -5276,13 +5439,6 @@
       var k = keyIn.value.trim();
       if (!k) { S.cloud.key = ''; saveSettings(); status.className = 'badline'; status.textContent = 'ลบ key แล้ว'; if (onChange) onChange(); return; }
       check(k, true);
-    });
-    addBtn.addEventListener('click', function () {
-      var n = custom.value.trim().replace(/^or:/, '').replace(/^https?:\/\/openrouter\.ai\//, '');
-      if (!/^[\w.-]+\/[\w.:-]+$/.test(n)) { showToast('ชื่อรุ่นต้องเป็นแบบ ผู้ผลิต/ชื่อรุ่น เช่น qwen/qwen3.5-27b'); return; }
-      if (!/:free$/.test(n)) showToast('รุ่นนี้ไม่ได้ลงท้ายด้วย :free จะตัดเงินจากเครดิต OpenRouter');
-      if (S.cloud.models.indexOf(n) < 0 && !CLOUD_PRESETS.some(function (p) { return p.id === n; })) S.cloud.models.push(n);
-      custom.value = ''; pick(n);
     });
     paint();
     if (S.cloud.key) check(S.cloud.key);
@@ -5306,7 +5462,8 @@
     box.appendChild(out);
     box.appendChild(h('div', { class: 'field', style: 'margin-top:12px' }, [h('label', { text: 'หน่วยความจำต่อคำขอ (ถ้าแชตยาวแล้วโมเดลลืมต้นเรื่อง ให้เพิ่ม · โหมดถนอมเครื่องใช้ไม่เกิน 8K)' }), ctxSel]));
     box.appendChild(switchRow('ถนอมเครื่อง (ลดความร้อน)', 'แนะนำให้เปิด: ไม่ให้โมเดลคิดยาวก่อนตอบ (ยกเว้นกด "คิดลึกข้อนี้") ใช้ CPU ครึ่งเดียว จำกัดความยาวคำตอบ ให้ตัวละครตอบทีละคน และปล่อยโมเดลออกจากหน่วยความจำหลังตอบ 2 นาที ตอบช้าลงเล็กน้อยแต่เครื่องเย็นกว่ามาก', localEco(), function (v) { S.local.eco = v; saveSettings(); }));
-    box.appendChild(h('p', { class: 'muted', html: 'ยังร้อนอยู่? เครื่องโน้ตบุ๊กที่ไม่มีการ์ดจอแยกจะร้อนเสมอเมื่อรันรุ่น 9B ลองรุ่นเล็ก <code>ollama pull qwen3.5:4b</code> หรือใช้ <b>Qwen 3.5 9B บนคลาวด์</b> ด้านบนแทน ซึ่งเครื่องไม่ต้องทำงานเลย' }));
+    box.appendChild(h('p', { class: 'muted', html: 'ยังร้อนอยู่? เครื่องโน้ตบุ๊กที่ไม่มีการ์ดจอแยกจะร้อนเสมอเมื่อรันรุ่น 9B ลองรุ่นเล็ก <code>ollama pull qwen3.5:4b</code> หรือใช้ <b>Groq</b> / <b>OpenRouter</b> ด้านบนแทน ซึ่งเครื่องไม่ต้องทำงานเลย' }));
+    box.appendChild(h('p', { class: 'muted', html: 'อยากใช้รุ่นอื่น: ดูที่ <a href="https://ollama.com/search" target="_blank" rel="noopener">ollama.com/search</a> แล้วพิมพ์ <code>ollama pull ชื่อรุ่น</code> ใน Command Prompt/Terminal จากนั้นกด "ตรวจการเชื่อมต่อ" แอปจะเพิ่มรุ่นนั้นในรายการให้เอง' }));
 
     function paintModels(r) {
       out.innerHTML = '';
@@ -5393,6 +5550,7 @@
     var localBox = h('div');
     root.appendChild(localBox);
     root.appendChild(h('h2', { class: 'section-title', text: 'โมเดล' }));
+    root.appendChild(modelGuide());
     var modelBox = h('div');
     root.appendChild(modelBox);
     function tokShort(n) { return n >= 1e6 ? '≈ ' + String(Math.round(n / 1e5) / 10) + ' ล้านโทเค็น' : '≈ ' + Math.round(n / 1000).toLocaleString('en-US') + 'K โทเค็น'; }
