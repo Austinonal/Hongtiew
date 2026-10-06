@@ -1337,3 +1337,32 @@ textarea.text.pz-goals { min-height: 110px; }
 .lm-cmd { display: flex; gap: 8px; align-items: flex-start; }
 .lm-cmd code { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
 .lm-item > button { white-space: nowrap; flex-shrink: 0; }
+
+/* 3.3.5: token bar under the composer, model chain, Ollama cloud list, reset card */
+.tokbar { display: block; width: 100%; margin-top: 6px; padding: 3px 8px; border: 0; background: transparent; color: var(--ink-soft); font: inherit; font-size: .74rem; line-height: 1.45; text-align: center; cursor: pointer; border-radius: 8px; overflow-wrap: anywhere; }
+.tokbar:hover { background: var(--code-bg); }
+.tokbar[hidden] { display: none; }
+.tokbar b { color: var(--ink); font-weight: 600; }
+.tokbar.warn { color: var(--danger); }
+.note.tokline.reset { margin-top: 1px; }
+.chain-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.chain-item { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 8px; font-size: .9rem; }
+.chain-item .n { width: 22px; height: 22px; border-radius: 50%; background: var(--marker); color: var(--marker-ink); display: grid; place-items: center; font-size: .78rem; font-weight: 700; flex: none; }
+.chain-item .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.chain-item .st { font-size: .76rem; color: var(--ink-soft); }
+.chain-item .st.bad { color: var(--danger); }
+.chain-item button { border: 1px solid var(--line); background: transparent; color: var(--ink); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 14px; line-height: 1; flex: none; }
+.chain-item button:disabled { opacity: .35; cursor: default; }
+.rs-card { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 14px; margin: 8px 0; display: grid; gap: 4px; font-size: .88rem; }
+.rs-card .rs-when { font-size: 1.02rem; font-weight: 700; }
+.rs-card .rs-left { color: var(--ink-soft); }
+.rs-card .rs-why { color: var(--ink-soft); font-size: .8rem; }
+.rs-card.blocked { border-color: var(--danger); }
+.oc-list { display: grid; gap: 6px; margin: 8px 0; }
+.oc-item { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 10px; }
+.oc-item.on { border-color: var(--pen); }
+.oc-item .nm { flex: 1; min-width: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.oc-item .nm small { display: block; color: var(--ink-soft); font-size: .76rem; }
+.chain-list[hidden], .keyrow[hidden] { display: none; }
+/* 3.3.5: no empty white bubble while the answer has not started */
+.msg.assistant > .md:empty { display: none; }

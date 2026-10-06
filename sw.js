@@ -1,6 +1,6 @@
 /* Unnie Study service worker: keeps the app working offline; never caches API calls.
    3.3.4: the app's own files load from the network first (cache only when offline), so an update shows up on the next open instead of the old version sticking around. */
-var CACHE = 'hongtiew-v3.3.4'; // keep in sync with VERSION in app.js
+var CACHE = 'hongtiew-v3.3.5'; // keep in sync with VERSION in app.js
 var CORE = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'vendor/marked.min.js', 'vendor/purify.min.js', 'vendor/mathjax/tex-svg.js',
