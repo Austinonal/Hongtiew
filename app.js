@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '3.3.5';
+  var VERSION = '3.3.6';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
@@ -561,7 +561,7 @@
     if (id === 'p') { var pl = botPersonaLine(); if (pl) L.push(pl); }
     else if (!o.noPz || o.noPz === 'name') {
       L.push('', '## Character for this conversation');
-      L.push('- In this chat you are "' + pzOneLine(c.name, 24) + '", one of my study buddies in the app "Unnie Study" (an AI: say so honestly if asked, and never claim to be a real person or a celebrity). The Persona section above describes my default big sister "พี่สาว": in this chat use this character\'s voice instead, and do not insist on being called พี่สาว. The accuracy and teaching rules above always win on any conflict.');
+      L.push('- In this chat you are "' + pzOneLine(c.name, 24) + '", one of my study buddies in the app "Unnie Study" (an AI: say so honestly if asked, and never claim to be a real person or a celebrity). You are NOT พี่สาว in this chat: never call yourself พี่สาว or say you are her; use only this character\'s name and voice. The accuracy and teaching rules above always win on any conflict.');
       L.push('- Voice: ' + chMeta(id).voice + '.');
     }
     if (!o.noPz) {
@@ -2015,8 +2015,11 @@
     var prof = clip((state.profile.text || '').trim(), 4000);
     var lt = logText();
     var today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    var ch = opts.ch || 'p';
+    // a character other than พี่สาว: remove the big-sister Persona section, otherwise the model keeps playing her
+    var base = ch === 'p' || opts.debate ? TUTOR_PROMPT : TUTOR_PROMPT.replace(/## Persona:[\s\S]*?(?=\n## Tone)/, '').replace('big-sister tutor (see the Persona section)', 'tutor (see the "Character for this conversation" section)').replace('in the big-sister voice', 'in your character\'s voice');
     var lines = [
-      TUTOR_PROMPT, '',
+      base, '',
       '## App context (how this tutor app works)',
       '- You are running inside my personal tutoring app "Unnie Study" (the AI model behind you can change in the app settings, so never say which company or model you are). Today is ' + today + ' (Thailand).',
       '- Files I attach (PDFs, photos, and Word, PowerPoint, or text files converted to text) come with my latest message. They are the project files in rule 1: base your teaching, summaries, and questions on them first, and cite the page or slide, for example [หน้า 12]. If a file is hard to read, or the message says a file could not be sent to you, say so plainly and never guess its content.',
@@ -2061,7 +2064,7 @@
         var sk = state.skills.find(function (s) { return s.id === m.skill; });
         if (sk) c += '\n\n[Instruction from the app]\n' + skillBlock(sk);
       }
-      if (isLast && opts && opts.persona) c += '\n\n' + GENDER_NOTE;
+      if (isLast && opts && opts.persona) c += '\n\n' + GENDER_NOTE + (chCur && chCur !== 'p' && CHS.list[chCur] ? ' [ย้ำ: ตอนนี้คุณคือ "' + CHS.list[chCur].name + '" ไม่ใช่พี่สาว ตอบด้วยบุคลิกและน้ำเสียงของตัวละครนี้]' : '');
     } else c = femaleFix(c);
     if (m.role === 'assistant' && m.ch && chCur && m.ch !== chCur && c) c = '[' + (CHS.list[m.ch] ? CHS.list[m.ch].name : (m.chName || 'another study buddy')) + ' (another study buddy of mine) answered earlier]\n' + c;
     return c;
@@ -6257,7 +6260,7 @@
     if (P.persOn) {
       var strong = pzTraits().map(function (t) { return { t: t, w: pzLevel(t.v) }; }).filter(function (x) { return x.w; })
         .sort(function (a, b) { return Math.abs(b.t.v - 50) - Math.abs(a.t.v - 50); });
-      if (strong.length) out.push('- Personality I chose for you (scale 0-100; only traits clearly away from neutral are listed): ' + strong.map(function (x) { return pzOneLine(x.t.en, 40) + ' = ' + x.w; }).join(', ') + '. Blend it naturally into the big-sister voice; the Persona and accuracy rules above still win on any conflict.');
+      if (strong.length) out.push('- Personality I chose for you (scale 0-100; only traits clearly away from neutral are listed): ' + strong.map(function (x) { return pzOneLine(x.t.en, 40) + ' = ' + x.w; }).join(', ') + '. Blend it naturally into your character\'s voice; the Persona and accuracy rules above still win on any conflict.');
     }
     if (!o.persOnly) {
       if (!chat && P.styleOn) out.push('- How I like to be taught: ' + PZ_STYLE.map(function (g) { return g.en + ': ' + pzOpt(g)[3]; }).join('; ') + '.');
