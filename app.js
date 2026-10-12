@@ -439,8 +439,9 @@
   }
   function chLvlRaw(pts) { return pts >= 150 ? 4 : pts >= 80 ? 3 : pts >= 30 ? 2 : 1; }
   // which characters answer in this subject: one, or up to CH_MAX_ALL when the subject is set to "all"
+  function chMapOf(subj) { return CHS.map[subj] || CHS.map.all || 'p'; } // the subject's own pick, else the "all" default
   function chPlanFor(subj) {
-    var m = CHS.map[subj] || CHS.map.all || 'p', vis = chVisible();
+    var m = chMapOf(subj), vis = chVisible();
     if (m === 'all') return vis.slice(0, CH_MAX_ALL);
     return [vis.indexOf(m) >= 0 ? m : 'p'];
   }
@@ -6658,14 +6659,14 @@
   function chTopWhy(s, id) { var v = CHS.votes[s]; var best = null; if (v) Object.keys(v.why).forEach(function (k) { if (k.indexOf(id + '|') === 0 && (!best || v.why[k] > v.why[best])) best = k; }); return best ? best.split('|')[1] : ''; }
   function cxSubjects(p) {
     var vs = chVisible(), first = vs.slice(0, CH_MAX_ALL), html = '', pair = chPair();
-    var sugs = CHS.sugNo && PZ_SUBJ_ROWS.filter(function (r) { var g = chSug(r[0]); return g && !CHS.sugNo[r[0]] && (CHS.map[r[0]] || 'p') !== g.who; });
+    var sugs = CHS.sugNo && PZ_SUBJ_ROWS.filter(function (r) { var g = chSug(r[0]); return g && !CHS.sugNo[r[0]] && chMapOf(r[0]) !== g.who; });
     if (CHS.autoSug !== false && sugs.length) sugs.forEach(function (r) {
       var g = chSug(r[0]), nm = g.who === 'all' ? 'โหมดทั้งหมด' : chName(g.who), why = g.who === 'all' ? '' : chTopWhy(r[0], g.who);
       html += '<section class="card sug" role="region" aria-label="ข้อเสนอจากผลดีเบต"><h3>จากโหวต ' + g.tot + ' ครั้ง วิชา' + r[1] + ' เหมาะกับ' + cxEsc(nm) + '</h3><p class="small">' + (g.who === 'all' ? 'คะแนนสูสีกัน' : 'คุณเลือก' + cxEsc(nm) + ' ' + Math.round(g.share * 100) + '% ของโหวตที่เลือกข้าง') + (why ? ' · เหตุผลที่เลือกบ่อย: ' + cxEsc(why) : '') + '</p><div class="row"><button type="button" class="btn small" data-act="sugyes" data-v="' + r[0] + '">ตั้งเป็นตัวละครประจำวิชา และจดลงความจำ</button><button type="button" class="btn ghost small" data-act="sugno" data-v="' + r[0] + '">ยังไม่ใช่</button></div></section>';
     });
     html += '<section class="card"><div class="card-head"><h2>ตัวละครประจำวิชา</h2><span class="badge">ใช้ร่วมกันทุกตัวละคร</span></div><p class="small">เลือกว่าแต่ละวิชาให้ใครตอบเป็นหลัก ใต้คำตอบมีปุ่ม "เรียกอีกคนมาช่วย" เสมอ แถบสีแสดงผลโหวตจากปุ่ม "เทียบสองสไตล์" แถว "ทุกวิชา" ใช้เป็นค่าเริ่มต้นของวิชาที่ไม่ได้ตั้งไว้</p>' +
       PZ_SUBJ_ROWS.map(function (r) {
-        var sid = r[0], m = CHS.map[sid] || 'p', v = CHS.votes[sid], ids = v ? Object.keys(v.w).filter(function (x) { return CHS.list[x] && v.w[x] > 0; }) : [], dec = ids.reduce(function (n, x) { return n + v.w[x]; }, 0);
+        var sid = r[0], m = chMapOf(sid), v = CHS.votes[sid], ids = v ? Object.keys(v.w).filter(function (x) { return CHS.list[x] && v.w[x] > 0; }) : [], dec = ids.reduce(function (n, x) { return n + v.w[x]; }, 0);
         if (m !== 'all' && (!CHS.list[m] || CHS.list[m].hidden)) m = 'p';
         var bar = dec ? '<div class="split" role="img" aria-label="ผลโหวต">' + ids.map(function (x) { return '<i style="width:' + (v.w[x] / dec * 100) + '%;background:var(--' + x + ')"></i>'; }).join('') + '</div><span class="small">' + ids.map(function (x) { return cxEsc(chName(x)) + ' ' + v.w[x]; }).join(' : ') + '</span>' : '<div class="split"></div><span class="small">ยังไม่มีโหวต</span>';
         return '<div class="srow"><b style="font-weight:500">' + r[1] + '</b><div>' + bar + '</div><div class="seg" role="group" aria-label="ตัวละครวิชา' + r[1] + '">' + vs.map(function (x) { return '<button type="button" class="' + x + '" data-act="map" data-s="' + sid + '" data-v="' + x + '" aria-pressed="' + (m === x) + '">' + cxEsc(chName(x)) + '</button>'; }).join('') + '<button type="button" data-act="map" data-s="' + sid + '" data-v="all" aria-pressed="' + (m === 'all') + '">ทั้งหมด</button></div></div>';
@@ -6743,7 +6744,7 @@
   function cxClick(e) {
     var b = e.target.closest('[data-act]'); if (!b || !$('personalized-root').contains(b)) return;
     var a = b.dataset.act, v = b.dataset.v, id = pzEditCh, c = chGet(id), k = b.dataset.k;
-    if (a === 'ch') { pzEditCh = CHS.edit = v; CHS.map.all = v; delete CHS.map[state.subject()]; pzConfirm = null; cxRefresh(); } // the character you pick also becomes the teacher (default + current subject); per-subject rows below still override
+    if (a === 'ch') { pzEditCh = CHS.edit = v; CHS.list[v].hidden = false; CHS.map.all = v; if (state.subject() !== 'all') delete CHS.map[state.subject()]; pzConfirm = null; cxRefresh(); } // the character you pick also becomes the teacher (default + current subject); per-subject rows below still override
     else if (a === 'newchar') { pzCreating = !pzCreating; pzDraw(); }
     else if (a === 'cancelnew') { pzCreating = false; pzDraw(); }
     else if (a === 'basepick') { pzDraft.base = v; pzDraw(); }
@@ -7101,7 +7102,7 @@
   // the block attached to the one message where I invoked the skill with /
   function skillBlock(s) {
     var left = SKILLS_BUDGET, body = clip(s.body, left); left -= body.length;
-    var out = ['I invoked my skill "' + s.name + '" (SKILL.md format used by Claude) for this message. Follow its instructions for your reply, together with the persona and accuracy rules above (those rules win on any conflict). Start the reply with one short line "ใช้สกิล: ' + s.name + '". You cannot run the skill\'s scripts here; only its written instructions and reference text apply.',
+    var out = ['I invoked my skill "' + s.name + '" (SKILL.md format used by Claude) for this message. Follow its instructions for your reply, together with the persona and accuracy rules above (those rules win on any conflict). Start the reply with one short line "ใช้สกิล: ' + s.name + '". The skill only changes how you work: still answer my message above (my question or topic) as my tutor, in your character\'s voice; if the skill is about something else (for example coding), apply only the parts that fit and never invent a task or sample code I did not ask for. You cannot run the skill\'s scripts here; only its written instructions and reference text apply.',
       'When to use: ' + clip(s.description, 600), 'Instructions:', body];
     (s.files || []).forEach(function (f) {
       if (left <= 200) return;
