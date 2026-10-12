@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '3.3.6';
+  var VERSION = '3.3.7';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
@@ -417,7 +417,7 @@
       votes[k] = s;
     });
     var dismissed = {}; Object.keys(o.sugNo || {}).forEach(function (k) { if (SUBJECT_LABEL[k] || k === 'all') dismissed[k] = true; });
-    return { v: 1, list: list, order: order, map: map, votes: votes, sugNo: dismissed, autoSug: o.autoSug !== false, nick: chOne(o.nick, 12), imgQ: CH_IMGQ[o.imgQ] ? o.imgQ : 'm', pair: Array.isArray(o.pair) ? o.pair.filter(function (id) { return list[id]; }).slice(0, 2) : [] };
+    return { v: 1, list: list, order: order, map: map, votes: votes, sugNo: dismissed, autoSug: o.autoSug !== false, nick: chOne(o.nick, 12), imgQ: CH_IMGQ[o.imgQ] ? o.imgQ : 'm', edit: list[o.edit] ? o.edit : 'p', pair: Array.isArray(o.pair) ? o.pair.filter(function (id) { return list[id]; }).slice(0, 2) : [] };
   }
   // brand-new store, or one made from what 3.3.1 kept in settings (name and picture of the big sister)
   function chInitial0() {
@@ -6728,7 +6728,7 @@
       pz: src ? JSON.parse(JSON.stringify(charPz(src))) : null });
     if (src) { x.adv.role = 'sister'; x.pz = JSON.parse(JSON.stringify(normPz(x.pz))); x.pz.custom = x.pz.custom.slice(0, chLimits(slot).custom); delete x.pz.items; }
     CHS.list[slot] = x; CHS.order.push(slot);
-    pzEditCh = slot; pzCreating = false; pzTab = 'identity'; pzDraft = { name: '', desc: '', base: 'blank', color: '#E8793A' };
+    pzEditCh = CHS.edit = slot; pzCreating = false; pzTab = 'identity'; pzDraft = { name: '', desc: '', base: 'blank', color: '#E8793A' };
     document.querySelectorAll('#personalized-root .pz-seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tab === pzTab)); });
     cxRefresh(); showToast('สร้าง "' + name + '" แล้ว');
   }
@@ -6738,12 +6738,12 @@
     Object.keys(CHS.map).forEach(function (k) { if (CHS.map[k] === id) CHS.map[k] = 'p'; });
     Object.keys(CHS.votes).forEach(function (k) { delete CHS.votes[k].w[id]; });
     CHS.pair = CHS.pair.filter(function (c) { return c !== id; });
-    if (pzEditCh === id) pzEditCh = 'p'; pzConfirm = null; cxRefresh(); showToast('ลบตัวละครแล้ว');
+    if (pzEditCh === id) pzEditCh = CHS.edit = 'p'; pzConfirm = null; cxRefresh(); showToast('ลบตัวละครแล้ว');
   }
   function cxClick(e) {
     var b = e.target.closest('[data-act]'); if (!b || !$('personalized-root').contains(b)) return;
     var a = b.dataset.act, v = b.dataset.v, id = pzEditCh, c = chGet(id), k = b.dataset.k;
-    if (a === 'ch') { pzEditCh = v; pzConfirm = null; pzDraw(); }
+    if (a === 'ch') { pzEditCh = CHS.edit = v; chSave(); pzConfirm = null; pzDraw(); }
     else if (a === 'newchar') { pzCreating = !pzCreating; pzDraw(); }
     else if (a === 'cancelnew') { pzCreating = false; pzDraw(); }
     else if (a === 'basepick') { pzDraft.base = v; pzDraw(); }
@@ -7558,7 +7558,7 @@
     state.pz = normPz(await kvGet('personalized', null));
     // 3.3.2: characters. First start after the update: the name and picture of the big sister kept in settings become hers; her sliders and teaching style are already state.pz
     var rawCh = await kvGet('chars', null);
-    CHS = rawCh ? chNorm(rawCh) : chInitial0();
+    CHS = rawCh ? chNorm(rawCh) : chInitial0(); pzEditCh = CHS.edit; // Personalized reopens on the character you last edited
     if (!rawCh) { await chSaveNow(); delete S.botName; delete S.botAvatar; saveSettings(); }
     chApplyTheme(); refreshBot();
     if (!state.errbook.length && !(await kvGet('errbook_imp', false))) { importLogToErr(); await kvSet('errbook_imp', true); }
