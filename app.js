@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '3.3.7';
+  var VERSION = '3.3.8';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
@@ -6743,7 +6743,7 @@
   function cxClick(e) {
     var b = e.target.closest('[data-act]'); if (!b || !$('personalized-root').contains(b)) return;
     var a = b.dataset.act, v = b.dataset.v, id = pzEditCh, c = chGet(id), k = b.dataset.k;
-    if (a === 'ch') { pzEditCh = CHS.edit = v; chSave(); pzConfirm = null; pzDraw(); }
+    if (a === 'ch') { pzEditCh = CHS.edit = v; CHS.map.all = v; delete CHS.map[state.subject()]; pzConfirm = null; cxRefresh(); } // the character you pick also becomes the teacher (default + current subject); per-subject rows below still override
     else if (a === 'newchar') { pzCreating = !pzCreating; pzDraw(); }
     else if (a === 'cancelnew') { pzCreating = false; pzDraw(); }
     else if (a === 'basepick') { pzDraft.base = v; pzDraw(); }
