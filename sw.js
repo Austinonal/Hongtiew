@@ -1,6 +1,6 @@
 /* Unnie Study service worker: keeps the app working offline; never caches API calls.
    3.3.4: the app's own files load from the network first (cache only when offline), so an update shows up on the next open instead of the old version sticking around. */
-var CACHE = 'hongtiew-v3.4.0'; // keep in sync with VERSION in app.js
+var CACHE = 'hongtiew-v3.5.0'; // keep in sync with VERSION in app.js
 var CORE = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
   'vendor/marked.min.js', 'vendor/purify.min.js', 'vendor/mathjax/tex-svg.js',
@@ -14,13 +14,14 @@ self.addEventListener('install', function (e) {
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+    return Promise.all(keys.filter(function (k) { return k.startsWith('hongtiew-v') && k !== CACHE; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
+  if (url.origin === self.location.origin && url.pathname.startsWith('/oauth2/')) return;
   if (url.hostname === 'generativelanguage.googleapis.com') return;
   var isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== self.location.origin && !isFont) return;
