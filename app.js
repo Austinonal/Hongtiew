@@ -2,15 +2,14 @@
 (function () {
   'use strict';
 
-  var VERSION = '3.4.0';
+  var VERSION = '3.5.0';
   var API = 'https://generativelanguage.googleapis.com';
   var TUTOR_PROMPT = document.getElementById('tutor-prompt').textContent.trim();
 
-  var DEFAULT_MODEL = 'gemini-3.8-flash';
+  var DEFAULT_MODEL = 'gemini-flash-latest';
   var FALLBACK_MODELS = [
-    { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (แนะนำ ใช้ฟรีได้)' },
     { id: 'gemini-flash-latest', label: 'Gemini Flash รุ่นล่าสุดเสมอ' },
-    { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite (เร็ว ประหยัด)' },
+    { id: 'gemini-flash-lite-latest', label: 'Gemini Flash-Lite รุ่นล่าสุด (เร็ว ประหยัด)' },
     { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (ต้องเปิดใช้แบบเสียเงิน)' }
   ];
   var LOCAL_PREFIX = 'ollama:'; // model ids that start with this run on your own computer through Ollama
@@ -33,7 +32,7 @@
     { n: 'gpt-oss:20b-cloud', name: 'GPT-OSS 20B', lvl: true, note: 'เล็ก เร็วที่สุด' }
   ];
   // 3.3.5: every character is a woman. This goes into every system prompt, and a short reminder rides on the newest message (models copy the tone of the history and of the last message)
-  var GENDER_LOCK = '## Gender lock (top priority; every character, every model)\n- Every character here (พี่สาว, ฮันนี่, แฮริน, any custom one) is a woman. Speak as a woman in Thai: ค่ะ / คะ / นะคะ / นะ / เนอะ (lightly); never ครับ / นะครับ / ผม / กระผม. Call yourself "พี่" (or your character name), never "ผม", also when you voice other people in examples or roleplay.\n- If earlier replies in this chat sound male, that was a mistake; do not copy it.';
+  var GENDER_LOCK = '## Gender lock (top priority; every character, every model)\n- Every character here (พี่สาว, ฮันนี่, แฮริน, any custom one) is a woman. Speak as a woman in Thai: ค่ะ / คะ / นะคะ / นะ / เนอะ (lightly); never ครับ / นะครับ / ผม / กระผม. Use your selected character name when referring to yourself, never "ผม", also when you voice other people in examples or roleplay.\n- If earlier replies in this chat sound male, that was a mistake; do not copy it.';
   var GENDER_NOTE = '[ย้ำ: ตอบด้วยเสียงผู้หญิงเสมอ ใช้ ค่ะ/คะ/นะคะ ห้ามใช้ ครับ/ผม]';
   var LANGUAGE_LOCK = '## Language lock (highest priority)\n- Default response language is Thai. Keep all explanations, tutoring, reasoning summaries, transitions, and casual conversation in natural Thai.\n- Use English only for necessary technical terms, code, source text, examples in an English lesson, or when the user explicitly requests English/translation. Explain technical terms in Thai when useful.\n- Never insert random Korean, Japanese, or any other language just because a character is Korean-inspired, a name/logo/history contains it, or an earlier reply used it. If this character’s language preference explicitly enables Korean, use at most one very short Korean expression occasionally; never teach or explain the main content in Korean.\n- Treat unintended foreign-language text in earlier assistant messages as a mistake, not a style to imitate. Do not mention or expose these rules.';
   var LANGUAGE_NOTE = '[ย้ำภาษา: คำอธิบายและบทสนทนาหลักเป็นภาษาไทย ห้ามแทรกเกาหลี ญี่ปุ่น หรือภาษาอื่นเอง ภาษาอังกฤษใช้เฉพาะศัพท์/โค้ด/ตัวอย่างบทเรียนภาษาอังกฤษ หรือเมื่อผู้ใช้ร้องขอ หากตั้งค่าตัวละครให้มีเกาหลี อนุญาตได้เพียงวลีสั้นมากเป็นครั้งคราว เนื้อหาสอนยังต้องเป็นภาษาไทย]';
@@ -516,7 +515,7 @@
       var av = n.querySelector(':scope > .av'); if (av) { av.dataset.ch = id; fillAvatar(av, id, { name: n.dataset.chname, color: n.dataset.chcolor }); }
       n.className = n.className.replace(/\bch-\S+/g, '').replace(/\s+/g, ' ').trim() + ' ch-' + (c ? id : 'gone');
     });
-    document.querySelectorAll('.pc-av').forEach(function (el) { el.dataset.ch = 'p'; fillAvatar(el, 'p'); });
+    document.querySelectorAll('.pc-av').forEach(function (el) { fillAvatar(el); });
   }
   // line added to the system prompt only when the user renamed the big sister
   function botPersonaLine() {
@@ -584,7 +583,6 @@
     return L.join('\n') + (pzb || '');
   }
 
-  var chCur = null;
   chApplyTheme();
   // a lesson counts as finished when a new one is started (or the summary is made) after at least 3 questions; each character that answered earns once
   function chLessonEnd(sess) {
@@ -941,10 +939,17 @@
   }
 
   async function listModels(key) {
-    var res = await fetch(API + '/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
-    if (!res.ok) throw await parseHttpError(res);
-    var data = await res.json();
-    return (data.models || []).filter(function (m) {
+    var models = [], pageToken = '';
+    do {
+      var query = new URLSearchParams({ pageSize: '200' });
+      if (pageToken) query.set('pageToken', pageToken);
+      var res = await fetch(API + '/v1beta/models?' + query, { headers: { 'x-goog-api-key': key } });
+      if (!res.ok) throw await parseHttpError(res);
+      var page = await res.json();
+      models = models.concat(page.models || []);
+      pageToken = page.nextPageToken;
+    } while (pageToken);
+    return models.filter(function (m) {
       var id = str(m.name).replace(/^models\//, '');
       var gen = (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1;
       return gen && /^gemini/.test(id) && !/(tts|image|live|embedding|transcribe|robotics|computer-use|audio|native)/.test(id);
@@ -955,7 +960,7 @@
   }
   function rankModel(id) {
     if (id === DEFAULT_MODEL) return 0;
-    if (id === 'gemini-flash-latest') return 1;
+    if (id === 'gemini-flash-lite-latest') return 1;
     var m = /gemini-(\d+(?:\.\d+)?)/.exec(id);
     var v = m ? parseFloat(m[1]) : 0;
     var penalty = /preview|exp/.test(id) ? 0.5 : 0;
@@ -2024,6 +2029,9 @@
       return '- [' + (x.topic || '-') + '] Q: ' + clip(x.q, 220) + ' | I answered: ' + clip(x.chosen, 100) + ' | correct: ' + clip(x.correct, 100);
     }).join('\n');
   }
+  function tutorBase(defaultPersona) {
+    return defaultPersona ? TUTOR_PROMPT : TUTOR_PROMPT.replace(/## Persona:[\s\S]*?(?=\n## Tone)/, '').replace('big-sister tutor (see the Persona section)', 'tutor (see the "Character for this conversation" section)').replace('in the big-sister voice', 'in your character\'s voice');
+  }
   function buildSystem(opts) {
     var subj = subjectInfo();
     var prof = clip((state.profile.text || '').trim(), 4000);
@@ -2031,7 +2039,7 @@
     var today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     var ch = opts.ch || chPlanFor(state.subject())[0] || 'p';
     // a character other than พี่สาว: remove the big-sister Persona section, otherwise the model keeps playing her
-    var base = ch === 'p' || opts.debate ? TUTOR_PROMPT : TUTOR_PROMPT.replace(/## Persona:[\s\S]*?(?=\n## Tone)/, '').replace('big-sister tutor (see the Persona section)', 'tutor (see the "Character for this conversation" section)').replace('in the big-sister voice', 'in your character\'s voice');
+    var base = tutorBase(ch === 'p' && !opts.debate);
     var lines = [
       base, '',
       '## App context (how this tutor app works)',
@@ -2083,6 +2091,7 @@
     }).join('');
   }
   function turnText(m, isLast, opts) {
+    var chCur = opts && opts.ch, author = m.ch || 'p';
     var c = str(m.content).trim();
     if (m.role === 'user') {
       if (m.imgs && m.imgs.length && !c) c = 'ช่วยดูรูปนี้หน่อย';
@@ -2093,7 +2102,7 @@
       }
       if (isLast && opts && opts.persona) c += '\n\n' + GENDER_NOTE + '\n' + LANGUAGE_NOTE + (chCur && chCur !== 'p' && CHS.list[chCur] ? ' [ย้ำ: ตอนนี้คุณคือ "' + CHS.list[chCur].name + '" ไม่ใช่พี่สาว ตอบด้วยบุคลิกและน้ำเสียงของตัวละครนี้]' : '');
     } else c = femaleFix(c);
-    if (m.role === 'assistant' && m.ch && chCur && m.ch !== chCur && c) c = '[' + (CHS.list[m.ch] ? CHS.list[m.ch].name : (m.chName || 'another study buddy')) + ' (another study buddy of mine) answered earlier]\n' + c;
+    if (m.role === 'assistant' && chCur && author !== chCur && c) c = '[' + (CHS.list[author] ? CHS.list[author].name : (m.chName || 'another study buddy')) + ' (another study buddy of mine) answered earlier]\n' + c;
     return c;
   }
   function activeMaterials() { return (state.session.materialIds || []).map(getMaterial).filter(function (m) { return m && m.status === 'ready'; }); }
@@ -2106,6 +2115,9 @@
       var lastIdx = msgs.length - 1, lastU = lastIdx;
       if (opts.second) while (lastU >= 0 && msgs[lastU].role !== 'user') lastU--;
       var budget = Math.min((flags && flags.histBudget) || Infinity, HISTORY_CHARS[S.hist] || HISTORY_CHARS.mid); // Groq's free plan and small local memory windows need a much smaller history
+      var opening = msgs.find(function (m) { return m.role === 'user' && str(m.content).trim(); });
+      var recallBudget = opening && lastIdx >= HISTORY_FULL_TURNS * 2 ? Math.min(1600, Math.floor(budget / 10)) : 0;
+      budget -= recallBudget;
       var picked = [];
       for (var i = lastIdx; i >= 0; i--) {
         var t = turnText(msgs[i], i === lastU && msgs[i].role === 'user', opts);
@@ -2114,6 +2126,26 @@
         if (picked.length && budget - t.length < 0) break;
         budget -= t.length;
         picked.unshift({ m: msgs[i], text: t, last: i === lastU });
+      }
+      if (recallBudget && i >= 0 && budget >= 0) {
+        var excerpts = [];
+        if (msgs.indexOf(opening) <= i) excerpts.push(clip(opening.content, Math.min(OLD_USER_CHARS, recallBudget - 1)));
+        var room = recallBudget - excerpts.join('').length - 3;
+        var query = str(msgs[lastU] && msgs[lastU].content).toLowerCase();
+        var words = typeof Intl.Segmenter === 'function'
+          ? Array.from(new Intl.Segmenter('th', { granularity: 'word' }).segment(query), function (w) { return w.segment; })
+          : query.split(/\s+/);
+        words = Array.from(new Set(words.filter(function (w) { return w.length > 2; }))).slice(-24);
+        var score = 0, related;
+        for (var n = i; room > 40 && n >= 0; n--) {
+          var old = msgs[n];
+          if (old === opening || old.role !== 'user') continue;
+          var oldText = str(old.content).toLowerCase();
+          var hits = words.filter(function (w) { return oldText.includes(w); }).length;
+          if (hits > score) { score = hits; related = old; }
+        }
+        if (related) excerpts.push(clip(related.content, room - 1));
+        if (excerpts.length) picked.unshift({ m: { role: 'user' }, text: excerpts.join('\n\n'), last: false });
       }
       var imgMsgsLeft = HISTORY_IMAGE_MSGS;
       for (var k = picked.length - 1; k >= 0; k--) {
@@ -2288,12 +2320,13 @@
   }
   function renderEmpty() {
     var cur = state.subject(), ui = SUBJECT_UI[cur];
-    var uploadBtn = h('button', { class: 'upload-cta', type: 'button', onclick: function () { fileInput.click(); } }, [h('span', { html: PAPERCLIP }), h('span', null, [h('span', { class: 't', text: 'ส่งไฟล์ให้พี่สาวอ่าน' }), h('span', { class: 'd', text: 'PDF (รวมไฟล์สแกน), Word, PowerPoint หรือรูปโจทย์ พี่สาวจะสรุป สอน ออกข้อสอบ และบอกเทคนิคให้' })])]);
-    var fine = h('p', { class: 'fine', text: 'พี่สาว AI อาจผิดพลาดได้ เรื่องสำคัญให้ตรวจกับหนังสือเรียน สสวท. หรือ mytcas.com' });
+    var speaker = chName(chPlanFor(cur)[0]);
+    var uploadBtn = h('button', { class: 'upload-cta', type: 'button', onclick: function () { fileInput.click(); } }, [h('span', { html: PAPERCLIP }), h('span', null, [h('span', { class: 't', text: 'ส่งไฟล์ให้' + speaker + 'อ่าน' }), h('span', { class: 'd', text: 'PDF (รวมไฟล์สแกน), Word, PowerPoint หรือรูปโจทย์ ช่วยสรุป สอน ออกข้อสอบ และบอกเทคนิคให้' })])]);
+    var fine = h('p', { class: 'fine', text: 'ผู้ช่วย AI อาจผิดพลาดได้ เรื่องสำคัญให้ตรวจกับหนังสือเรียน สสวท. หรือ mytcas.com' });
     if (ui) return h('div', { class: 'empty' }, [
       h('div', { class: 'hero' }, [
         h('h1', { text: ui.hello }),
-        h('p', { class: 'lead', text: state.dueCount ? ui.lead + ' · วันนี้มีบัตรคำครบกำหนดทบทวน ' + state.dueCount + ' ใบ' : ui.lead })
+        h('p', { class: 'lead', text: state.dueCount ? ui.lead.replace(/พี่สาว/g, function () { return speaker; }) + ' · วันนี้มีบัตรคำครบกำหนดทบทวน ' + state.dueCount + ' ใบ' : ui.lead.replace(/พี่สาว/g, function () { return speaker; }) })
       ]),
       resumeNode(cur), uploadBtn, fine
     ]);
@@ -2835,7 +2868,6 @@
     setBusy(true);
     var plan = gen.ch && CHS.list[gen.ch] ? [gen.ch] : chPlanFor(state.subject()), chId = plan[0], rest = gen.ch ? (gen.rest || []) : ((isLocal(S.model) && (localEco() || isOllamaCloud(S.model))) || isGroq(S.model) ? [] : plan.slice(1)), chOk = false, sess0 = state.session;
     var am = { role: 'assistant', content: '', ts: Date.now(), gen: { only: gen.only || null, deep: !!gen.deep, ch: chId, second: !!gen.second }, ch: chId, chName: chName(chId), chColor: chGet(chId).color };
-    chCur = chId;
     state.session.messages.push(am);
     var node = appendMessage(am);
     refreshExtras();
@@ -2869,7 +2901,7 @@
       var callModel = function (mdl) {
         return gemini({
           model: mdl, thinking: level, deep: !!gen.deep, system: buildSystem(tools), code: tools.code, search: tools.search, signal: ctl.signal, needs: needs,
-          buildContents: makeContentsBuilder({ withMaterials: true, persona: true, signal: ctl.signal, scope: scope, second: !!gen.second, extraUserText: gen.second ? CH_SECOND_TEXT : undefined }, node),
+          buildContents: makeContentsBuilder({ withMaterials: true, persona: true, ch: chId, signal: ctl.signal, scope: scope, second: !!gen.second, extraUserText: gen.second ? CH_SECOND_TEXT : undefined }, node),
           onSwitch: function (from, to, why) { setStatus(node, modelShort(from) + ' ' + why + ' · กำลังสลับไปใช้ ' + modelShort(to) + '…'); },
           onUpdate: function (a) {
             if (S.showThoughts) am.thoughts = a.thoughts; // the thinking text is only kept (and shown, once the answer is done) when you asked for it
@@ -2904,7 +2936,7 @@
     finally {
       unscope();
       clearInterval(think.timer); setStatus(node, ''); state.ctl = null;
-      finalizeRender(node, am); setBusy(false); refreshExtras(); queueSave(); chCur = null;
+      finalizeRender(node, am); setBusy(false); refreshExtras(); queueSave();
       if (chOk && rest.length && state.session === sess0) setTimeout(function () { if (!state.busy && state.session === sess0) generate({ ch: rest[0], rest: rest.slice(1), second: true }); }, 350);
     }
   }
@@ -2919,7 +2951,7 @@
     var am = { role: 'assistant', kind: id === 'quiz' ? 'quiz' : 'cards', content: '', ts: Date.now(), qid: newId('q'), genStructured: { id: id, o: o }, ch: chId, chName: chName(chId), chColor: chGet(chId).color };
     state.session.messages.push(am);
     var node = appendMessage(am);
-    var think = startThinking(node, id === 'quiz' ? 'พี่สาวกำลังออกข้อสอบและตรวจเฉลย' : 'พี่สาวกำลังทำบัตรคำ');
+    var think = startThinking(node, chName(chId) + (id === 'quiz' ? 'กำลังออกข้อสอบและตรวจเฉลย' : 'กำลังทำบัตรคำ'));
     var ctl = new AbortController(); state.ctl = ctl;
     var unscope = scopeMaterials(o.only);
     try {
@@ -3160,7 +3192,7 @@
   // the tools of the subject window being shown go right after "เครื่องมือช่วยเรียน"
   function quickList() {
     var u = SUBJECT_UI[state.subject()];
-    var extra = u ? u.tools.map(function (t) { return { label: t[0], pick: true, hint: t[1] }; }) : [];
+    var extra = u ? u.tools.map(function (t) { return { label: t[0], pick: true, hint: t[1].replace(/พี่สาว/g, function () { return chName(chPlanFor(state.subject())[0]); }) }; }) : [];
     return [QUICK[0]].concat(extra, QUICK.slice(1));
   }
   function renderQuick() {
@@ -3539,7 +3571,7 @@
     }).sort(byExamDate).slice(0, MAX_EXAMS);
     tasks.forEach(function (t) { if (t.exam && !exams.some(function (e) { return e.id === t.exam; })) t.exam = ''; });
     var chat = (Array.isArray(p.chat) ? p.chat : []).filter(function (m) { return m && (m.role === 'user' || m.role === 'assistant') && str(m.content).trim(); })
-      .slice(-40).map(function (m) { return { role: m.role, content: str(m.content), ts: m.ts || 0, plan: m.plan || (m.role === 'assistant' ? extractPlan(m.content) : null), applied: !!m.applied }; });
+      .slice(-40).map(function (m) { return { role: m.role, content: str(m.content), ts: m.ts || 0, ch: m.role === 'assistant' ? chOne(m.ch, 24) || 'p' : undefined, plan: m.plan || (m.role === 'assistant' ? extractPlan(m.content) : null), applied: !!m.applied }; });
     return { exams: exams, tasks: tasks, chat: chat, adapt: normAdapt(p.adapt), pullDay: str(p.pullDay).slice(0, 10) };
   }
   function savePlanner() { kvSet('planner', normPlanner(state.planner)); }
@@ -4002,7 +4034,7 @@
     var adb = adaptBanner(); if (adb) el.appendChild(adb);
     // ----- schedule of the day -----
     el.appendChild(h('div', { class: 'pl-h2' }, [h('span', { text: isToday ? 'ตารางวันนี้' : 'ตารางวัน' }), h('span', { text: live.length ? 'ทำแล้ว ' + done + '/' + live.length + ' · ' + fmtHours(total) : '' })]));
-    if (!list.length && !planTaskEdit) el.appendChild(h('p', { class: 'muted', text: 'ยังไม่มีรายการ เพิ่มเองด้านล่าง หรือให้พี่สาวช่วยจัดให้' }));
+    if (!list.length && !planTaskEdit) el.appendChild(h('p', { class: 'muted', text: 'ยังไม่มีรายการ เพิ่มเองด้านล่าง หรือให้ผู้ช่วยจัดให้' }));
     if (planTaskEdit && !planTaskEdit.id) el.appendChild(taskEditorNode(el, key));
     if (timed.length) {
       var tt = h('div', { class: 'pl-tt' });
@@ -4036,16 +4068,15 @@
     return tasks.length || exams.length ? { exams: exams, tasks: tasks } : null;
   }
   function stripPlan(raw) { return str(raw).replace(/```plan[\s\S]*?(```|$)/i, '').trim(); }
-  function buildPlanSystem() {
+  function buildPlanSystem(ch) {
     var P = state.planner, now = new Date();
     var upcoming = P.tasks.filter(function (t) { return t.date >= dayKey() && daysUntil(t.date) < 15; }).sort(function (a, b) { return (a.date + (a.start || '99')) < (b.date + (b.start || '99')) ? -1 : 1; }).slice(0, 40);
     var lines = [
-      TUTOR_PROMPT, '',
+      tutorBase(ch === 'p'), '',
       '## App context: the planning room',
       '- I opened the planner area of my study app "Unnie Study" to plan my studying with you. Today is ' + dayKey() + ' (' + now.toLocaleDateString('en-GB', { weekday: 'long' }) + ', Thailand time).',
-      botPersonaLine(),
-      withPz('p', function () { return pzBlock('other', { persOnly: true }); }).trim(),
-      '- Stay in the big-sister persona. Keep replies short and practical. If you lack the exam date, my hours per day, or my weak subjects, ask at most 3 short questions in one message; if you know enough, propose a plan right away instead of asking more.',
+      chBlock(ch, 'other', { persOnly: true }),
+      '- Speak as the selected character. Earlier replies may be from another tutor. Keep replies short and practical. If you lack the exam date, my hours per day, or my weak subjects, ask at most 3 short questions in one message; if you know enough, propose a plan right away instead of asking more.',
       '- When you propose a schedule, first write a brief Thai explanation (at most about 8 lines, a short list is fine). Then, as the very last thing in your message, add exactly one machine-readable block in this format (dates are YYYY-MM-DD from today onward, start is 24-hour HH:MM or "" if flexible, min is minutes 15-180, subject is one of math, physics, chem, bio, python, english, other. "exams" lists only exams I told you the date of or you confirmed, and that are not already in the current planner data. Each task may have "exam": the exact name of the exam it prepares for, from the exam list below or from "exams"; leave it out if it serves none):',
       '```plan',
       '{"exams":[{"name":"A-Level เคมี","date":"2027-03-14"}],"tasks":[{"date":"' + dayKey() + '","start":"17:30","min":60,"subject":"chem","title":"เคมี: ปริมาณสารสัมพันธ์ ข้อ 1–8","exam":"A-Level เคมี"}]}',
@@ -4065,10 +4096,10 @@
     lines.push('', GENDER_LOCK);
     return lines.join('\n');
   }
-  function planContents() {
+  function planContents(ch) {
     var contents = [];
     state.planner.chat.filter(function (m) { return str(m.content).trim() && !m.error; }).slice(-12).forEach(function (m) {
-      var role = m.role === 'user' ? 'user' : 'model', prev = contents[contents.length - 1], txt = role === 'model' ? femaleFix(m.content) : m.content;
+      var role = m.role === 'user' ? 'user' : 'model', prev = contents[contents.length - 1], txt = role === 'model' ? turnText(m, false, { ch: ch }) : m.content;
       if (prev && prev.role === role) prev.parts[0].text += '\n\n' + txt; else contents.push({ role: role, parts: [{ text: txt }] });
     });
     while (contents.length && contents[0].role !== 'user') contents.shift();
@@ -4100,7 +4131,7 @@
   }
   function planCard(m) {
     var pl = m.plan, card = h('div', { class: 'pc-plan' });
-    card.appendChild(h('div', { class: 'pc-plan-h', text: 'แผนที่พี่สาวเสนอ' }));
+    card.appendChild(h('div', { class: 'pc-plan-h', text: 'แผนที่เสนอ' }));
     if ((pl.exams || []).length) card.appendChild(h('p', { class: 'muted', text: 'วันสอบ: ' + pl.exams.map(function (e) { return e.name + ' ' + fmtExamDate(e.date); }).join(' · ') }));
     var byDay = {}; pl.tasks.forEach(function (t) { (byDay[t.date] = byDay[t.date] || []).push(t); });
     var days = Object.keys(byDay).sort(), ul = h('ul');
@@ -4114,22 +4145,22 @@
     if (m.role === 'user') return h('div', { class: 'pc-row me' }, [h('div', { class: 'pc-b', text: m.content })]);
     var shown = stripPlan(m.content);
     var md = h('div', { class: 'md' + (shown ? '' : ' pc-think'), html: shown ? renderMarkdown(shown) : '' });
-    if (!shown && !m.error && planBusy) md.textContent = 'พี่สาวกำลังคิด…';
+    if (!shown && !m.error && planBusy) md.textContent = chName(m.ch) + 'กำลังคิด…';
     planNodes.set(m, md);
     var b = h('div', { class: 'pc-b' }, [md]);
     if (m.error) b.appendChild(h('p', { class: 'note bad', text: m.error }));
     if (m.note) b.appendChild(h('p', { class: 'note', text: m.note }));
     if (m.plan) b.appendChild(planCard(m));
     if (shown) { enhanceCode(md); typeset(md); }
-    return h('div', { class: 'pc-row' }, [planAvatar(), b]);
+    return h('div', { class: 'pc-row' }, [planAvatar(m.ch || 'p'), b]);
   }
-  function planAvatar() { var a = h('div', { class: 'pc-av', 'aria-hidden': 'true' }); fillAvatar(a); return a; }
+  function planAvatar(id) { var a = h('div', { class: 'pc-av', 'aria-hidden': 'true' }); a.dataset.ch = id || chPlanFor('all')[0]; fillAvatar(a); return a; }
   function drawPlanMsgs() {
     var list = pcListEl; if (!list || !list.isConnected) return;
     list.innerHTML = ''; planNodes = new Map();
     var chat = state.planner.chat;
     if (!chat.length) {
-      list.appendChild(h('div', { class: 'pc-row' }, [planAvatar(), h('div', { class: 'pc-b' }, [h('div', { class: 'md' }, [h('p', { text: 'มาวางแผนกันนะ บอกพี่สาวมาสั้นๆ ว่าสอบวันไหน วันละอ่านได้กี่ชั่วโมง และวิชาไหนที่กังวลที่สุด เดี๋ยวพี่จัดตารางให้ แล้วกดใส่ลงแพลนเนอร์ทางซ้ายได้เลย' })])])]));
+      list.appendChild(h('div', { class: 'pc-row' }, [planAvatar(), h('div', { class: 'pc-b' }, [h('div', { class: 'md' }, [h('p', { text: 'มาวางแผนกันนะ บอกสั้นๆ ว่าสอบวันไหน วันละอ่านได้กี่ชั่วโมง และวิชาไหนที่กังวลที่สุด เดี๋ยวช่วยจัดตารางให้ แล้วกดใส่ลงแพลนเนอร์ทางซ้ายได้เลย' })])])]));
     }
     chat.forEach(function (m) { list.appendChild(planMsgNode(m)); });
     list.scrollTop = list.scrollHeight;
@@ -4150,13 +4181,13 @@
     if (!canAsk()) { showToast('ยังไม่ได้ตั้งโมเดล ไปที่หน้าตั้งค่าก่อน (ฟรี: Groq หรือ Gemini key)'); return; }
     var P = state.planner;
     P.chat.push({ role: 'user', content: text, ts: Date.now() });
-    var am = { role: 'assistant', content: '', ts: Date.now() };
+    var am = { role: 'assistant', content: '', ts: Date.now(), ch: chPlanFor('all')[0] };
     P.chat.push(am);
     planBusy = true; planCtl = new AbortController(); drawPlanMsgs();
     try {
       var acc = await gemini({
-        system: buildPlanSystem(), code: false, search: searchUsable(), signal: planCtl.signal,
-        buildContents: async function () { return planContents(); },
+        system: buildPlanSystem(am.ch), code: false, search: searchUsable(), signal: planCtl.signal,
+        buildContents: async function () { return planContents(am.ch); },
         onUpdate: function (a) { am.content = femaleFix(a.text); updatePlanBubble(am); }
       });
       checkFinish(acc);
@@ -6013,6 +6044,18 @@
     var root = $('settings-root'); root.innerHTML = '';
     root.appendChild(h('h1', { class: 'page-title', text: 'ตั้งค่า' }));
 
+    if (document.querySelector('meta[name="chatgpt-sign-in"]')) {
+      var account = h('div', { class: 'muted', text: 'กำลังตรวจสอบบัญชี…' });
+      root.appendChild(account);
+      fetch('/oauth2/auth', { cache: 'no-store', redirect: 'error' }).then(function (res) {
+        var signedIn = res.status === 202;
+        if (!signedIn && res.status !== 401) throw new Error();
+        account.textContent = signedIn ? 'ลงชื่อเข้าใช้ด้วย ChatGPT แล้ว · ' : '';
+        account.appendChild(h('a', { href: signedIn ? '/oauth2/sign_out?rd=/' : '/oauth2/start?rd=/', text: signedIn ? 'ออกจากระบบ' : 'Sign in with ChatGPT' }));
+        account.appendChild(document.createTextNode(' · ประวัติบทเรียนและ API key เก็บในเบราว์เซอร์นี้ ผู้ใช้โปรไฟล์เบราว์เซอร์เดียวกันเข้าถึงได้'));
+      }).catch(function () { account.textContent = 'ตรวจสอบบัญชีไม่ได้ ลองเปิดหน้าตั้งค่าอีกครั้ง'; });
+    }
+
     root.appendChild(h('h2', { class: 'section-title', text: 'Gemini API key (ฟรี · ไม่ต้องใส่ถ้าใช้ Groq, OpenRouter หรือโมเดลในเครื่อง)' }));
     root.appendChild(h('p', { class: 'muted', html: 'สร้าง key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> key จะเก็บไว้ในเครื่องนี้เท่านั้น และส่งไปที่ Google ตอนถามพี่สาวเท่านั้น' }));
     var keyInput = h('input', { class: 'text', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'วาง API key ที่นี่', value: S.apiKey });
@@ -6753,6 +6796,7 @@
       pz: src ? JSON.parse(JSON.stringify(charPz(src))) : null });
     if (src) { x.adv.role = 'sister'; x.pz = JSON.parse(JSON.stringify(normPz(x.pz))); x.pz.custom = x.pz.custom.slice(0, chLimits(slot).custom); delete x.pz.items; }
     CHS.list[slot] = x; CHS.order.push(slot);
+    CHS.map = { all: slot }; CHS.overrides = {};
     pzEditCh = CHS.edit = slot; pzCreating = false; pzTab = 'identity'; pzDraft = { name: '', desc: '', base: 'blank', color: '#E8793A' };
     document.querySelectorAll('#personalized-root .pz-seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tab === pzTab)); });
     cxRefresh(); showToast('สร้าง "' + name + '" แล้ว');
