@@ -3463,7 +3463,6 @@
     state.view = v; paintTokBar();
     updateTitle(); if (narrowMQ.matches) setSide(false);
     if (v === 'review') markAdaptSeen();
-    if (v === 'notebook' || v === 'mastery' || v === 'kmap' || v === 'flash' || v === 'personalized') markNew(v);
     document.querySelectorAll('.view').forEach(function (el) { el.hidden = el.id !== 'view-' + v; });
     document.querySelectorAll('.nav-btn').forEach(function (b) { if (b.dataset.view === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     if (v === 'library') renderLibrary();
@@ -4706,8 +4705,6 @@
   }
   function dueErrors() { var now = Date.now(); return state.errbook.filter(function (x) { return x.status === 'open' && x.due && x.due <= now; }); }
   function updateNbBadge() { var b = $('nb-badge'); if (!b) return; var n = dueErrors().length; b.hidden = !n; b.textContent = n > 99 ? '99+' : String(n); }
-  function markNew(v) { try { localStorage.setItem('us-new-' + v, '1'); } catch (e) {} updateNewTags(); }
-  function updateNewTags() { ['notebook', 'mastery', 'kmap', 'flash', 'personalized'].forEach(function (v) { var t = $('nw-' + v), seen = false; try { seen = localStorage.getItem('us-new-' + v) === '1'; } catch (e) {} if (t) t.hidden = seen; }); }
   var nbF = { s: 'all', e: 'all', done: false }, nbMode = {}, nbArm = '', nbArmTimer = 0, nbReview = null, nbBusy = false;
   function mdNode(text, cls) { var d = h('div', { class: 'md ' + (cls || ''), html: renderMarkdown(text) }); return d; }
   function simTopic(it, hard) { return (hard ? 'ข้อที่ยากขึ้นจากเรื่อง ' : 'ข้อคล้ายกับโจทย์นี้ เรื่อง ') + (it.topic || '') + (it.sub ? ' › ' + it.sub : '') + ': ' + clip(it.q, 160); }
