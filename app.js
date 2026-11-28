@@ -4448,8 +4448,8 @@
 
   function renderMoodSection(root, byDay, score, results) {
     var range = S.moodRange === 7 || S.moodRange === 30 ? S.moodRange : 14;
-    root.appendChild(h('h2', { class: 'section-title', text: 'วันนี้รู้สึกยังไงบ้าง' }));
-    root.appendChild(h('p', { class: 'muted', text: 'วัน' + new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · ข้อมูลอารมณ์เก็บในเครื่องนี้เท่านั้น' }));
+    var moodTitle = h('h2', { class: 'section-title', text: 'วันนี้รู้สึกยังไงบ้าง' });
+    var moodDate = h('p', { class: 'muted', text: 'วัน' + new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · ข้อมูลอารมณ์เก็บในเครื่องนี้เท่านั้น' });
 
     var faces = h('div', { class: 'mt-faces', role: 'group', 'aria-label': 'อารมณ์วันนี้' });
     var stressBox = h('div', { class: 'mt-chips', role: 'group', 'aria-label': 'ความเครียดตอนนี้' });
@@ -4537,11 +4537,10 @@
       for (i = range - 1; i >= 0; i--) { var dt = new Date(); dt.setDate(dt.getDate() - i); var k = dayKey(dt); sl.push({ k: k, date: dt, e: state.mood[k] || null, act: score(byDay[k]) }); }
       var N = sl.length, step = (W - L - R) / N, X = function (j) { return L + step * (j + 0.5); }, Y = function (v) { return T + (5.3 - v) / 4.6 * mh; };
       var maxAct = Math.max(10, Math.max.apply(null, sl.map(function (d) { return d.act; })));
-      var s = '<rect x="' + L + '" y="' + Y(2.5) + '" width="' + (W - L - R) + '" height="' + (T + mh - Y(2.5)) + '" fill="var(--c-rose)" opacity=".35" rx="6"/>';
-      s += '<text x="' + (L + 6) + '" y="' + (T + mh - 1) + '" font-size="10">โซนควรพัก</text>';
-      for (var v = 1; v <= 5; v++) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--line)" stroke-dasharray="2 4"/><text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
-      s += '<text x="0" y="' + (by - 4) + '" font-size="10">กิจกรรม</text>';
-      sl.forEach(function (d, j) { var hh = d.act / maxAct * bh; s += '<rect x="' + (X(j) - Math.min(9, step * 0.3)) + '" y="' + (by + bh - hh) + '" width="' + Math.min(18, step * 0.6) + '" height="' + Math.max(hh, d.act ? 1 : 0) + '" rx="2" fill="var(--c-sky)"/>'; });
+      var s = '';
+      for (var v = 1; v <= 5; v++) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--line)"/><text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+      s += '<text x="0" y="' + (by - 4) + '" font-size="10">กิจกรรม (ครั้ง)</text>';
+      sl.forEach(function (d, j) { var hh = d.act / maxAct * bh; s += '<rect x="' + (X(j) - Math.min(9, step * 0.3)) + '" y="' + (by + bh - hh) + '" width="' + Math.min(18, step * 0.6) + '" height="' + Math.max(hh, d.act ? 1 : 0) + '" rx="2" fill="var(--c-sage)"/>'; });
       (state.planner.exams || []).forEach(function (ex) {
         var j = sl.findIndex(function (d) { return d.k === ex.date; });
         if (j >= 0) s += '<line x1="' + X(j) + '" x2="' + X(j) + '" y1="' + T + '" y2="' + (by + bh) + '" stroke="var(--coral)" stroke-dasharray="4 4" opacity=".7"/><text class="mt-ex" x="' + X(j) + '" y="' + (T + 10) + '" text-anchor="middle">' + escapeHtml(clip(ex.name, 8)) + '</text>';
@@ -4598,9 +4597,11 @@
 
     function refresh() { paintCheckin(); drawVerdict(); drawChart(); drawInsights(); }
 
-    root.appendChild(h('div', { class: 'mt-card' }, [
-      faces,
-      h('div', { class: 'mt-lbl', text: 'ความเครียดตอนนี้' }), stressBox,
+    root.appendChild(h('section', { class: 'mt-card mt-checkin' }, [
+      h('div', { class: 'mt-checkin-grid' }, [
+        h('div', null, [moodTitle, moodDate, faces]),
+        h('div', { class: 'mt-stress' }, [h('h3', { text: 'ความเครียดตอนนี้' }), stressBox])
+      ]),
       h('div', { class: 'mt-lbl', text: 'มีอะไรเกี่ยวข้องไหม (เลือกได้หลายอัน)' }), tagBox,
       h('div', { class: 'mt-lbl', text: 'โน้ตสั้นๆ (ไม่บังคับ)' }), note,
       h('div', { class: 'row' }, [h('button', { class: 'primary', type: 'button', text: 'บันทึกวันนี้', onclick: function () { if (!moodEntry()) return needMood(); saveNote(); flashSaved(); } }), clearBtn, saved])
@@ -4608,9 +4609,10 @@
     root.appendChild(verdictBox);
     root.appendChild(breathBox);
 
-    root.appendChild(h('h2', { class: 'section-title', text: 'กราฟอารมณ์กับการเรียน' }));
-    root.appendChild(h('p', { class: 'muted', text: 'ดูว่าช่วงไหนใจดีและเรียนได้ ช่วงไหนเริ่มหมดแรง จะได้วางแผนเบาลงก่อนจะหมดไฟ' }));
-    root.appendChild(segControl([{ label: '7 วัน', value: 7 }, { label: '14 วัน', value: 14 }, { label: '30 วัน', value: 30 }], range, function (v) { range = v; S.moodRange = v; saveSettings(); drawChart(); }));
+    root.appendChild(h('div', { class: 'mt-chart-heading' }, [
+      h('h2', { class: 'section-title', text: 'อารมณ์กับการเรียน' }),
+      segControl([{ label: '7 วัน', value: 7 }, { label: '14 วัน', value: 14 }, { label: '30 วัน', value: 30 }], range, function (v) { range = v; S.moodRange = v; saveSettings(); drawChart(); })
+    ]));
     root.appendChild(chartBox);
 
     root.appendChild(h('h2', { class: 'section-title', text: 'สิ่งที่พี่สาวสังเกตเห็น' }));
