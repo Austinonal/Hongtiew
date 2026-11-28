@@ -8,6 +8,9 @@
 
   var DEFAULT_MODEL = 'gemini-flash-latest';
   var FALLBACK_MODELS = [
+    { id: 'gemini-4-argon', label: 'Gemini 4 Argon' },
+    { id: 'gemini-4-carbon', label: 'Gemini 4 Carbon' },
+    { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen' },
     { id: 'gemini-flash-latest', label: 'Gemini Flash รุ่นล่าสุดเสมอ' },
     { id: 'gemini-flash-lite-latest', label: 'Gemini Flash-Lite รุ่นล่าสุด (เร็ว ประหยัด)' },
     { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (ต้องเปิดใช้แบบเสียเงิน)' }
@@ -1870,6 +1873,7 @@
     if (o.deep) return { level: 'high', why: 'คิดลึกตามที่กด' };
     if (o.hasImg) return { level: 'high', why: 'มีรูปโจทย์' };
     // 3.3.5: "high" is slow and token-hungry, so a keyword alone is not enough: the message also needs numbers, symbols or some length (otherwise "medium")
+    if (/พิสูจน์ว่า|จงพิสูจน์|หาข้อโต้แย้ง|หาตัวอย่างค้าน|ยกตัวอย่างค้าน|\b(prove that|counterexample)\b/i.test(t)) return { level: 'high', why: 'ต้องสร้างหรือตรวจเหตุผลหลายขั้น' };
     if (hard) return (hasDigit || sym || len > 60) ? { level: 'high', why: 'โจทย์ คำนวณ หรือโค้ด' } : { level: 'medium', why: 'ถามเรื่องโจทย์ทั่วไป' };
     if (sym && hasDigit && len > 8) return { level: 'high', why: 'มีสมการหรือตัวเลข' };
     if (len > 400) return (hasDigit || sym) ? { level: 'high', why: 'ข้อความยาวและมีตัวเลข' } : { level: 'medium', why: 'ข้อความยาว' };
@@ -2042,6 +2046,7 @@
     var base = tutorBase(ch === 'p' && !opts.debate);
     var lines = [
       base, '',
+      'When reviewing my attempt, identify the first step that changes the result, explain why, and give a targeted hint. For a proof, check the assumptions and edge cases. If the information permits multiple answers, state what would distinguish them.',
       '## App context (how this tutor app works)',
       '- You are running inside my personal tutoring app "Unnie Study" (the AI model behind you can change in the app settings, so never say which company or model you are). Today is ' + today + ' (Thailand).',
       '- Files I attach (PDFs, photos, and Word, PowerPoint, or text files converted to text) come with my latest message. They are the project files in rule 1: base your teaching, summaries, and questions on them first, and cite the page or slide, for example [หน้า 12]. If a file is hard to read, or the message says a file could not be sent to you, say so plainly and never guess its content.',
@@ -6100,6 +6105,9 @@
       if (!list.some(function (m) { return m.id === S.model; })) list.unshift({ id: S.model, label: S.model });
       var sel = h('select', { class: 'text', 'aria-label': 'เลือกโมเดล' });
       list.forEach(function (m) { var op = h('option', { value: m.id, text: m.label }); if (m.id === S.model) op.selected = true; sel.appendChild(op); });
+      if (!list.some(function (m) { return m.id === 'gemini-4-xenon'; })) {
+        sel.appendChild(h('option', { disabled: true, text: 'Gemini 4 Xenon (ยังไม่พบในรายการ API)' }));
+      }
       var info = h('div', { class: 'model-info', 'aria-live': 'polite' });
       function drawInfo() {
         info.innerHTML = '';
