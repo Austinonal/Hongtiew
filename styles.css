@@ -1372,8 +1372,9 @@ textarea.text.pz-goals { min-height: 110px; }
 .mt-checkin .mt-face[aria-pressed="true"] small { color: inherit; }
 .mt-stress { border-inline-start: 1px solid var(--line); padding-inline-start: 24px; }
 .mt-stress .mt-chips { display: flex; gap: 0; flex-wrap: nowrap; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; }
-.mt-stress .mt-chip { flex: 1; border: 0; padding: 6px 3px; min-height: 44px; border-radius: 11px; }
-.mt-stress .mt-chip[aria-pressed="true"]::before { content: '✓ '; }
+.mt-stress .mt-chip { flex: 1; border: 0; padding: 6px 3px; min-height: 44px; border-radius: 11px; font-weight: 600; }
+.mt-stress .mt-chip::before { content: "✓" / ""; display: block; visibility: hidden; }
+.mt-stress .mt-chip[aria-pressed="true"]::before { visibility: visible; }
 .mt-chart-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-top: 24px; }
 .mt-chart-heading .section-title { margin: 0; }
 .mt-chartcard { padding: clamp(12px, 2vw, 24px); }
