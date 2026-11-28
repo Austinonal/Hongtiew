@@ -49,3 +49,10 @@ test('Gemini model discovery follows page tokens and excludes audio models', asy
   assert.deepEqual(Array.from(await ctx.listModels('test'), m => m.id), ['gemini-test']);
   assert.equal(new URL(urls[1]).searchParams.get('pageToken'), 'a+b');
 });
+
+test('short proof requests get high reasoning while greetings stay low', () => {
+  const ctx = fixture(['classifyThinking'], { str: String });
+  assert.equal(ctx.classifyThinking('พิสูจน์ว่าจำนวนเฉพาะมีไม่สิ้นสุด').level, 'high');
+  assert.equal(ctx.classifyThinking('Find a counterexample').level, 'high');
+  assert.equal(ctx.classifyThinking('สวัสดี').level, 'low');
+});
