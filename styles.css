@@ -946,11 +946,6 @@ textarea.text.tl-text { min-height: 84px; height: 84px; resize: vertical; }
 .ad-note small { opacity: .8; }
 
 /* ---- 3.1.9: error notebook + mastery ---- */
-.nav-new { margin-left: auto; font-size: .66rem; font-weight: 700; border-radius: 999px; padding: 0 8px; background: var(--coral); color: #fff; }
-.nav-new[hidden] { display: none; }
-.nav-new + .nav-badge { margin-left: 6px; }
-:root[data-theme="dark"] .nav-new { color: #1A1715; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav-new { color: #1A1715; } }
 .card-like { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px; margin: 12px 0; }
 .nb-stats { margin: 8px 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .nb-stats .stat b.sm { font-size: 1.05rem; line-height: 1.5; }
