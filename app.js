@@ -11,6 +11,7 @@
     { id: 'gemini-4-argon', label: 'Gemini 4 Argon' },
     { id: 'gemini-4-carbon', label: 'Gemini 4 Carbon' },
     { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen' },
+    { id: 'gemini-4-neon', label: 'Gemini 4 Neon' },
     { id: 'gemini-flash-latest', label: 'Gemini Flash รุ่นล่าสุดเสมอ' },
     { id: 'gemini-flash-lite-latest', label: 'Gemini Flash-Lite รุ่นล่าสุด (เร็ว ประหยัด)' },
     { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (ต้องเปิดใช้แบบเสียเงิน)' }
@@ -6105,9 +6106,6 @@
       if (!list.some(function (m) { return m.id === S.model; })) list.unshift({ id: S.model, label: S.model });
       var sel = h('select', { class: 'text', 'aria-label': 'เลือกโมเดล' });
       list.forEach(function (m) { var op = h('option', { value: m.id, text: m.label }); if (m.id === S.model) op.selected = true; sel.appendChild(op); });
-      if (!list.some(function (m) { return m.id === 'gemini-4-xenon'; })) {
-        sel.appendChild(h('option', { disabled: true, text: 'Gemini 4 Xenon (ยังไม่พบในรายการ API)' }));
-      }
       var info = h('div', { class: 'model-info', 'aria-live': 'polite' });
       function drawInfo() {
         info.innerHTML = '';
